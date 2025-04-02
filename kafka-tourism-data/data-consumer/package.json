@@ -1,0 +1,16 @@
+{
+    "name": "data-consumer",
+    "version": "1.0.0",
+    "description": "Consume data from Kafka and store in PostgreSQL",
+    "main": "index.js",
+    "scripts": {
+      "start": "node index.js"
+    },
+    "dependencies": {
+      "@prisma/client": "^4.13.0",
+      "kafkajs": "^2.2.4"
+    },
+    "devDependencies": {
+      "prisma": "^4.13.0"
+    }
+  }
