@@ -2,14 +2,16 @@
 const fs = require('fs');
 const path = require('path');
 const { parse } = require('csv-parse/sync');
-const { Kafka } = require('kafkajs');
+const { Kafka, Partitioners } = require('kafkajs');
 
 // Configure Kafka producer
 const kafka = new Kafka({
   clientId: 'csv-processor',
   brokers: [process.env.KAFKA_BOOTSTRAP_SERVERS || 'localhost:9092']
 });
-const producer = kafka.producer();
+const producer = kafka.producer({
+  createPartitioner: Partitioners.LegacyPartitioner
+});
 
 // Helper function to read and parse CSV files
 function readCsvFile(filePath, delimiter = ',') {
