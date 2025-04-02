@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   blockchain-app:
     build: 
@@ -7,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: ecotoken-blockchain
     ports:
-      - "5050:5050"  # Puerto para la aplicación web
+      - "5051:5050"  # Puerto para la aplicación web
       - "8545:8545"  # Puerto para el nodo Hardhat
     volumes:
       - ./contracts:/app/contracts

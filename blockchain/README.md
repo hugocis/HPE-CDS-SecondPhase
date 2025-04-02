@@ -14,7 +14,7 @@ docker-compose up -d --build
 ```
 
 2. Acceder a la aplicación:
-- Interfaz web: http://localhost:5050
+- Interfaz web: http://localhost:5051
 - Nodo Hardhat: http://localhost:8545
 
 ## Configurar MetaMask
