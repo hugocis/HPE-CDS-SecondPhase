@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Iniciar el nodo de Hardhat en segundo plano
-npx hardhat node &
+npx hardhat node --hostname 0.0.0.0 --network hardhat &
 
 # Esperar a que el nodo esté listo
 sleep 10
