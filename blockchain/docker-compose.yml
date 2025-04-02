@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  blockchain-app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecotoken-blockchain
+    ports:
+      - "5050:5050"  # Puerto para la aplicación web
+      - "8545:8545"  # Puerto para el nodo Hardhat
+    volumes:
+      - ./contracts:/app/contracts
+      - ./artifacts:/app/artifacts
+      - ./cache:/app/cache
+      - ./scripts:/app/scripts
+      - hardhat-data:/app/.hardhat
+    environment:
+      - NODE_ENV=development
+      - HARDHAT_NETWORK=localhost
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5050"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - blockchain-network
+
+networks:
+  blockchain-network:
+    driver: bridge
+
+volumes:
+  hardhat-data:
+    driver: local

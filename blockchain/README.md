@@ -1,72 +1,69 @@
-# Ethereum Local Development Environment
+# EcoToken Blockchain Application
 
-Este proyecto demuestra una implementación básica de un contrato inteligente usando Hardhat.
+Esta aplicación permite gestionar tokens EcoToken con funcionalidades de registro de usuarios y gestión de carteras.
 
-## Configuración Inicial
+## Requisitos
+- Docker
+- Docker Compose
 
-1. Instalar las dependencias:
+## Inicio Rápido
+
+1. Construir y ejecutar los contenedores:
 ```bash
-npm install
+docker-compose up -d --build
 ```
 
-2. Compilar los contratos:
-```bash
-npx hardhat compile
-```
-
-## Iniciar la Red Local
-
-Para iniciar la red local de desarrollo:
-```bash
-npx hardhat node
-```
-
-Este comando iniciará una red local de Ethereum en `http://127.0.0.1:8545`.
-
-## Desplegar el Contrato
-
-Para desplegar el contrato SimpleStorage en la red local:
-```bash
-npx hardhat run scripts/deploy.ts --network localhost
-```
+2. Acceder a la aplicación:
+- Interfaz web: http://localhost:5050
+- Nodo Hardhat: http://localhost:8545
 
 ## Configurar MetaMask
 
-1. Abrir MetaMask y hacer clic en el selector de red
-2. Seleccionar "Agregar red"
-3. Agregar una nueva red con los siguientes detalles:
-   - Nombre de la red: Hardhat Local
-   - Nueva URL de RPC: http://127.0.0.1:8545
-   - ID de cadena: 31337
-   - Símbolo de moneda: ETH
+1. Abrir MetaMask
+2. Añadir una nueva red con estos parámetros:
+   - Network Name: Hardhat Local
+   - RPC URL: http://localhost:8545
+   - Chain ID: 31337
+   - Currency Symbol: ETH
 
-### Cuentas de Desarrollo
+## Funcionalidades
 
-La red local de Hardhat viene con varias cuentas preconfiguradas con 10000 ETH cada una. Puedes importar estas cuentas a MetaMask usando las claves privadas que se muestran al iniciar el nodo de Hardhat.
+- Registro de usuarios con dos opciones:
+  - Usar cartera existente de MetaMask
+  - Crear nueva cartera gestionada por el sistema
+- Gestión de tokens:
+  - Almacenar (mint) nuevos tokens
+  - Quemar tokens
+  - Transferir entre carteras
+- Sistema de roles (owner, admin, usuario)
+- Pausado de emergencia del contrato
 
-## Interactuar con el Contrato
+## Comandos Útiles
 
-El contrato SimpleStorage tiene dos funciones principales:
-- `store(uint256)`: Almacena un valor nuevo
-- `retrieve()`: Recupera el valor almacenado
-
-Puedes interactuar con el contrato a través de MetaMask una vez desplegado.
-
-## Testing
-
-Para ejecutar las pruebas:
+### Ver logs de la aplicación
 ```bash
-npx hardhat test
+docker-compose logs -f blockchain-app
 ```
 
-## Estructura del Proyecto
+### Detener la aplicación
+```bash
+docker-compose down
+```
 
+### Reiniciar la aplicación
+```bash
+docker-compose restart
 ```
-├── contracts/
-│   └── SimpleStorage.sol    # Contrato principal
-├── scripts/
-│   └── deploy.ts           # Script de despliegue
-├── test/
-│   └── SimpleStorage.ts    # Tests del contrato
-└── hardhat.config.ts       # Configuración de Hardhat
+
+### Detener y eliminar volúmenes (reset completo)
+```bash
+docker-compose down -v
 ```
+
+## Desarrollo
+
+Los archivos están montados en volúmenes, por lo que los cambios en:
+- Contratos (./contracts)
+- Scripts (./scripts)
+- Interfaz web (./public)
+Se reflejarán en el contenedor sin necesidad de reconstruir.
