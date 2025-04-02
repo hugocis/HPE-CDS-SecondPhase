@@ -110,12 +110,116 @@
             border-radius: 4px;
             font-size: 0.9em;
         }
-        .verify-box {
-            background-color: #e3f2fd;
-            padding: 15px;
-            margin: 10px 0;
+        /* Estilos del Explorador */
+        .explorer-section {
+            margin-top: 30px;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
             border-radius: 4px;
+        }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box h4 {
+            margin: 0 0 10px 0;
+            color: #666;
+        }
+
+        .stat-box p {
+            margin: 0;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2196F3;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: #f1f1f1;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .tab-btn.active {
+            background: #2196F3;
+            color: white;
+        }
+
+        .tab-content {
             display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .hash-cell {
+            font-family: monospace;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .address-cell {
+            font-family: monospace;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .time-cell {
+            color: #666;
         }
     </style>
 </head>
@@ -138,6 +242,81 @@
             <h3>Información de Contratos</h3>
             <p>SimpleStorage: <span id="simpleStorageAddress">Cargando...</span></p>
             <p>UserRegistry: <span id="userRegistryAddress">Cargando...</span></p>
+        </div>
+    </div>
+
+    <!-- Nueva sección del explorador -->
+    <div class="container explorer-section">
+        <h2>Explorador de Blockchain</h2>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Buscar por dirección / tx hash / bloque">
+            <button onclick="search()">Buscar</button>
+        </div>
+        
+        <div class="stats-panel">
+            <div class="stat-box">
+                <h4>Último Bloque</h4>
+                <p id="lastBlock">-</p>
+            </div>
+            <div class="stat-box">
+                <h4>Total Transacciones</h4>
+                <p id="totalTx">-</p>
+            </div>
+            <div class="stat-box">
+                <h4>Holders</h4>
+                <p id="totalHolders">-</p>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('transactions')">Últimas Transacciones</button>
+            <button class="tab-btn" onclick="showTab('blocks')">Bloques</button>
+            <button class="tab-btn" onclick="showTab('holders')">Top Holders</button>
+        </div>
+
+        <div id="transactions" class="tab-content active">
+            <table class="tx-table">
+                <thead>
+                    <tr>
+                        <th>Hash</th>
+                        <th>Bloque</th>
+                        <th>De</th>
+                        <th>Para</th>
+                        <th>Valor</th>
+                        <th>Tiempo</th>
+                    </tr>
+                </thead>
+                <tbody id="txList"></tbody>
+            </table>
+        </div>
+
+        <div id="blocks" class="tab-content">
+            <table class="block-table">
+                <thead>
+                    <tr>
+                        <th>Bloque</th>
+                        <th>Tiempo</th>
+                        <th>Txs</th>
+                        <th>Gas Usado</th>
+                        <th>Minero</th>
+                    </tr>
+                </thead>
+                <tbody id="blockList"></tbody>
+            </table>
+        </div>
+
+        <div id="holders" class="tab-content">
+            <table class="holders-table">
+                <thead>
+                    <tr>
+                        <th>Rango</th>
+                        <th>Dirección</th>
+                        <th>Balance</th>
+                        <th>% Total</th>
+                    </tr>
+                </thead>
+                <tbody id="holdersList"></tbody>
+            </table>
         </div>
     </div>
 
@@ -341,6 +520,226 @@
             }
         }
 
+        // Funciones del explorador
+        async function updateExplorerData() {
+            if (!provider) return;
+            
+            try {
+                // Actualizar último bloque
+                const lastBlockNumber = await provider.getBlockNumber();
+                const lastBlockData = await provider.getBlock(lastBlockNumber);
+                document.getElementById('lastBlock').textContent = lastBlockNumber;
+
+                // Actualizar total de transacciones
+                const txCount = await getTotalTransactions();
+                document.getElementById('totalTx').textContent = txCount;
+
+                // Actualizar holders
+                const holders = await getHolders();
+                document.getElementById('totalHolders').textContent = holders.length;
+
+                // Actualizar listas
+                await updateTransactionsList();
+                await updateBlocksList();
+                await updateHoldersList();
+            } catch (error) {
+                console.error('Error actualizando datos del explorador:', error);
+            }
+        }
+
+        async function getTotalTransactions() {
+            try {
+                const filter = contract.filters.Transfer();
+                const events = await contract.queryFilter(filter);
+                return events.length;
+            } catch (error) {
+                console.error('Error getting total transactions:', error);
+                return 0;
+            }
+        }
+
+        async function getHolders() {
+            try {
+                const filter = contract.filters.Transfer();
+                const events = await contract.queryFilter(filter);
+                const holders = new Set();
+                
+                for (const event of events) {
+                    const [from, to] = event.args;
+                    const toBalance = await contract.balanceOf(to);
+                    const fromBalance = await contract.balanceOf(from);
+                    
+                    if (toBalance > 0) holders.add(to);
+                    if (fromBalance > 0) holders.add(from);
+                }
+                
+                return Array.from(holders);
+            } catch (error) {
+                console.error('Error getting holders:', error);
+                return [];
+            }
+        }
+
+        async function updateTransactionsList() {
+            try {
+                const txList = document.getElementById('txList');
+                txList.innerHTML = '';
+                
+                const filter = contract.filters.Transfer();
+                const events = await contract.queryFilter(filter, -100); // Últimas 100 transacciones
+                
+                for (const event of events.reverse()) {
+                    const [from, to, value] = event.args;
+                    const block = await event.getBlock();
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="hash-cell">${event.transactionHash}</td>
+                        <td>${event.blockNumber}</td>
+                        <td class="address-cell">${from}</td>
+                        <td class="address-cell">${to}</td>
+                        <td>${value.toString()}</td>
+                        <td class="time-cell">${new Date(block.timestamp * 1000).toLocaleString()}</td>
+                    `;
+                    txList.appendChild(row);
+                }
+            } catch (error) {
+                console.error('Error updating transactions list:', error);
+            }
+        }
+
+        async function updateBlocksList() {
+            try {
+                const blockList = document.getElementById('blockList');
+                blockList.innerHTML = '';
+                
+                const currentBlock = await provider.getBlockNumber();
+                for (let i = currentBlock; i > Math.max(0, currentBlock - 10); i--) {
+                    const block = await provider.getBlock(i);
+                    if (!block) continue;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${block.number}</td>
+                        <td class="time-cell">${new Date(block.timestamp * 1000).toLocaleString()}</td>
+                        <td>${block.transactions.length}</td>
+                        <td>${block.gasUsed.toString()}</td>
+                        <td class="address-cell">${block.miner}</td>
+                    `;
+                    blockList.appendChild(row);
+                }
+            } catch (error) {
+                console.error('Error updating blocks list:', error);
+            }
+        }
+
+        async function updateHoldersList() {
+            try {
+                const holdersList = document.getElementById('holdersList');
+                holdersList.innerHTML = '';
+                
+                const holders = await getHolders();
+                const totalSupply = await getTotalSupply();
+                
+                // Obtener balances y ordenar por cantidad
+                const holdersWithBalance = await Promise.all(
+                    holders.map(async address => ({
+                        address,
+                        balance: await contract.balanceOf(address)
+                    }))
+                );
+                
+                holdersWithBalance.sort((a, b) => b.balance - a.balance);
+                
+                holdersWithBalance.forEach((holder, index) => {
+                    const percentage = (holder.balance * 100n) / totalSupply;
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td class="address-cell">${holder.address}</td>
+                        <td>${holder.balance.toString()}</td>
+                        <td>${percentage.toString()}%</td>
+                    `;
+                    holdersList.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error updating holders list:', error);
+            }
+        }
+
+        async function getTotalSupply() {
+            try {
+                const holders = await getHolders();
+                let total = 0n;
+                for (const holder of holders) {
+                    const balance = await contract.balanceOf(holder);
+                    total += balance;
+                }
+                return total;
+            } catch (error) {
+                console.error('Error getting total supply:', error);
+                return 0n;
+            }
+        }
+
+        function showTab(tabName) {
+            // Ocultar todos los contenidos
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Desactivar todos los botones
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Mostrar el contenido seleccionado
+            document.getElementById(tabName).classList.add('active');
+            
+            // Activar el botón seleccionado
+            const button = document.querySelector(`.tab-btn[onclick="showTab('${tabName}')"]`);
+            if (button) button.classList.add('active');
+        }
+
+        async function search() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+
+            try {
+                // Buscar por bloque si es un número
+                if (/^\d+$/.test(query)) {
+                    const block = await provider.getBlock(parseInt(query));
+                    if (block) {
+                        showTab('blocks');
+                        // Resaltar el bloque en la lista
+                        return;
+                    }
+                }
+
+                // Buscar por hash de transacción
+                if (query.startsWith('0x') && query.length === 66) {
+                    const tx = await provider.getTransaction(query);
+                    if (tx) {
+                        showTab('transactions');
+                        // Resaltar la transacción en la lista
+                        return;
+                    }
+                }
+
+                // Buscar por dirección
+                if (ethers.isAddress(query)) {
+                    const balance = await contract.balanceOf(query);
+                    document.getElementById('balanceCheckAddress').value = query;
+                    await checkBalance();
+                    showTab('holders');
+                }
+            } catch (error) {
+                console.error('Error en la búsqueda:', error);
+                alert('No se encontraron resultados para la búsqueda');
+            }
+        }
+
+        // Modificar la función connectWallet para incluir la actualización del explorador
         async function connectWallet() {
             try {
                 if (typeof window.ethereum !== 'undefined') {
@@ -356,6 +755,10 @@
                     await initializeContracts();
                     await updateContractStatus();
                     await updateUserRole();
+                    await updateExplorerData(); // Añadir esta línea
+                    
+                    // Configurar actualizaciones periódicas del explorador
+                    setInterval(updateExplorerData, 15000); // Actualizar cada 15 segundos
                     
                     // Configurar listeners para cambios en la red o cuenta
                     window.ethereum.removeAllListeners(); // Remover listeners existentes
@@ -393,140 +796,51 @@
                     throw new Error('Direcciones de contratos no encontradas');
                 }
                 
-                document.getElementById('simpleStorageAddress').textContent = 
-                    `${contractAddress.substring(0, 6)}...${contractAddress.substring(38)}`;
-                document.getElementById('userRegistryAddress').textContent = 
-                    `${registryAddress.substring(0, 6)}...${registryAddress.substring(38)}`;
-                
-                console.log('Direcciones de contratos cargadas:', { contractAddress, registryAddress });
-            } catch (error) {
-                console.error('Error cargando direcciones:', error);
-                if (retryCount > 0) {
-                    console.log(`Reintentando cargar direcciones... (${retryCount} intentos restantes)`);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    return loadContractAddresses(retryCount - 1);
+                        document.getElementById('simpleStorageAddress').textContent = 
+                            `${contractAddress.substring(0, 6)}...${contractAddress.substring(38)}`;
+                        document.getElementById('userRegistryAddress').textContent = 
+                            `${registryAddress.substring(0, 6)}...${registryAddress.substring(38)}`;
+                    } catch (error) {
+                        console.error('Error loading contract addresses:', error);
+                        if (retryCount > 0) {
+                            console.log(`Retrying... (${retryCount} attempts left)`);
+                            setTimeout(() => loadContractAddresses(retryCount - 1), 1000);
+                        } else {
+                            alert('No se pudieron cargar las direcciones de los contratos después de varios intentos.');
+                        }
+                    }
                 }
-                document.getElementById('connectionStatus').innerHTML = 
-                    'Error: No se pudieron cargar las direcciones de los contratos. ' + error.message;
-            }
-        }
 
         async function initializeContracts() {
             try {
                 if (!contractAddress || !registryAddress) {
                     await loadContractAddresses();
                 }
+
+                if (!provider || !signer) {
+                    throw new Error('Proveedor o firma no inicializados. Por favor, conecta tu wallet primero.');
+                }
+
                 contract = new ethers.Contract(contractAddress, contractABI, signer);
                 registryContract = new ethers.Contract(registryAddress, registryABI, signer);
+
+                // Verificar que los contratos estén desplegados correctamente
+                const code = await provider.getCode(contractAddress);
+                if (code === '0x') {
+                    throw new Error('El contrato SimpleStorage no está desplegado en esta dirección');
+                }
+
+                const registryCode = await provider.getCode(registryAddress);
+                if (registryCode === '0x') {
+                    throw new Error('El contrato UserRegistry no está desplegado en esta dirección');
+                }
+
+                console.log('Contratos inicializados correctamente');
                 await checkUserRegistration();
             } catch (error) {
-                console.error('Error initializing contracts:', error);
-                document.getElementById('connectionStatus').innerHTML = 
-                    'Error: No se pudieron inicializar los contratos. ' + error.message;
+                console.error('Error inicializando contratos:', error);
+                throw error;
             }
-        }
-
-        // Nuevas funciones para el manejo de carteras
-        function showMetaMaskRegistration() {
-            document.getElementById('metamaskRegistration').style.display = 'block';
-            document.getElementById('newWalletRegistration').style.display = 'none';
-            document.getElementById('walletChoiceSection').style.display = 'none';
-        }
-
-        function showNewWalletRegistration() {
-            document.getElementById('metamaskRegistration').style.display = 'none';
-            document.getElementById('newWalletRegistration').style.display = 'block';
-            document.getElementById('walletChoiceSection').style.display = 'none';
-        }
-
-        async function registerWithMetaMask() {
-            try {
-                const username = document.getElementById('usernameMetaMask').value.trim();
-                if (!username) {
-                    alert('Por favor, ingresa un nombre de usuario');
-                    return;
-                }
-
-                if (!registryContract) {
-                    await connectWallet();
-                }
-
-                const tx = await registryContract.registerWithExistingWallet(username);
-                await tx.wait();
-                
-                alert('¡Registro exitoso con MetaMask!');
-                await checkUserRegistration();
-            } catch (error) {
-                console.error('Error en registro con MetaMask:', error);
-                alert('Error en el registro: ' + (error.reason || error.message));
-            }
-        }
-
-        async function createAndRegisterWallet() {
-            try {
-                const username = document.getElementById('usernameNewWallet').value.trim();
-                if (!username) {
-                    alert('Por favor, ingresa un nombre de usuario');
-                    return;
-                }
-
-                // Generar nueva cartera
-                const wallet = ethers.Wallet.createRandom();
-                
-                // Mostrar información de la cartera
-                document.getElementById('generatedAddress').textContent = wallet.address;
-                document.getElementById('privateKey').textContent = wallet.privateKey;
-                document.getElementById('generatedWalletInfo').style.display = 'block';
-
-                // Registrar la cartera generada
-                if (!registryContract) {
-                    await connectWallet(); // Necesitamos MetaMask para registrar la nueva cartera
-                }
-
-                const tx = await registryContract.registerWithGeneratedWallet(username, wallet.address);
-                await tx.wait();
-
-                // Guardar información de la cartera en el localStorage (encriptada)
-                const walletInfo = {
-                    address: wallet.address,
-                    privateKey: wallet.privateKey,
-                    username: username,
-                    creationDate: new Date().toISOString()
-                };
-                
-                const encryptedInfo = btoa(JSON.stringify(walletInfo)); // Encriptación básica
-                localStorage.setItem(`wallet_${wallet.address}`, encryptedInfo);
-
-                alert('¡Cartera creada y registrada exitosamente!');
-            } catch (error) {
-                console.error('Error creando cartera:', error);
-                alert('Error creando cartera: ' + (error.reason || error.message));
-            }
-        }
-
-        function downloadWalletInfo() {
-            const address = document.getElementById('generatedAddress').textContent;
-            const privateKey = document.getElementById('privateKey').textContent;
-            const username = document.getElementById('usernameNewWallet').value;
-
-            const walletInfo = {
-                address: address,
-                privateKey: privateKey,
-                username: username,
-                creationDate: new Date().toISOString(),
-                network: 'Hardhat Local',
-                warning: 'MANTÉN ESTA INFORMACIÓN SEGURA Y PRIVADA'
-            };
-
-            const blob = new Blob([JSON.stringify(walletInfo, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `wallet-${address.substring(0, 8)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
         }
 
         // Modificar la función existente de checkUserRegistration
