@@ -2,48 +2,25 @@ const express = require('express');
 const path = require('path');
 const app = express();
 
-// Log all incoming requests
-app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-    next();
-});
-
-// Enable CORS for all routes
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
-    next();
-});
-
 // Serve static files from the public directory
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static('public'));
 
-// Serve index.html for the root route
 app.get('/', (req, res) => {
-    const indexPath = path.join(__dirname, 'public', 'index.html');
-    console.log('Attempting to serve:', indexPath);
-    res.sendFile(indexPath);
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Add a test route to verify server is responding
-app.get('/test', (req, res) => {
-    res.send('Server is working!');
-});
-
-const PORT = 3000;
-const HOST = '0.0.0.0'; // Changed from 127.0.0.1 to allow external connections
-
-// Error handling
-app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    res.status(500).send('Something went wrong!');
-});
-
-const server = app.listen(PORT, HOST, () => {
-    console.log(`Server running at http://${HOST}:${PORT}`);
-    console.log(`Serving files from: ${path.join(__dirname, 'public')}`);
-});
+const port = 5050;
+app.listen(port)
+    .on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.error(`Port ${port} is already in use. Please try a different port.`);
+        } else if (err.code === 'EACCES') {
+            console.error(`Port ${port} requires elevated privileges. Please try a different port.`);
+        } else {
+            console.error('Error starting server:', err);
+        }
+        process.exit(1);
+    })
+    .on('listening', () => {
+        console.log(`Server running at http://localhost:${port}`);
+    });
