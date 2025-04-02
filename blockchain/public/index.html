@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleStorage Interface</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>SimpleStorage Interface</h1>
+    
+    <div class="container">
+        <h2>Connection Status</h2>
+        <p id="connectionStatus">Not connected to MetaMask</p>
+        <button onclick="connectWallet()">Connect Wallet</button>
+    </div>
+
+    <div class="container">
+        <h2>Store Value</h2>
+        <input type="number" id="storeValue" placeholder="Enter a number">
+        <button onclick="storeNumber()">Store</button>
+    </div>
+
+    <div class="container">
+        <h2>Retrieve Value</h2>
+        <button onclick="retrieveNumber()">Retrieve</button>
+        <p>Current Value: <span id="currentValue">Not retrieved yet</span></p>
+    </div>
+
+    <script>
+        const contractAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+        const contractABI = [
+            "function store(uint256 value) public",
+            "function retrieve() public view returns (uint256)",
+            "event ValueChanged(uint256 newValue)"
+        ];
+
+        let provider;
+        let signer;
+        let contract;
+
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    // Request account access
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    contract = new ethers.Contract(contractAddress, contractABI, signer);
+                    
+                    const address = await signer.getAddress();
+                    document.getElementById('connectionStatus').innerHTML = 
+                        'Connected: ' + address.substring(0, 6) + '...' + address.substring(38);
+                }
+            } catch (error) {
+                console.error('Error connecting to MetaMask:', error);
+                document.getElementById('connectionStatus').innerHTML = 
+                    'Error connecting: ' + error.message;
+            }
+        }
+
+        async function storeNumber() {
+            try {
+                const value = document.getElementById('storeValue').value;
+                if (!value) {
+                    alert('Please enter a value');
+                    return;
+                }
+                
+                const tx = await contract.store(value);
+                await tx.wait();
+                alert('Value stored successfully!');
+                retrieveNumber();
+            } catch (error) {
+                console.error('Error storing value:', error);
+                alert('Error storing value: ' + error.message);
+            }
+        }
+
+        async function retrieveNumber() {
+            try {
+                const value = await contract.retrieve();
+                document.getElementById('currentValue').innerHTML = value.toString();
+            } catch (error) {
+                console.error('Error retrieving value:', error);
+                document.getElementById('currentValue').innerHTML = 'Error: ' + error.message;
+            }
+        }
+
+        // Check if MetaMask is installed
+        window.addEventListener('load', function() {
+            if (typeof window.ethereum !== 'undefined') {
+                document.getElementById('connectionStatus').innerHTML = 
+                    'MetaMask is installed! Click Connect Wallet to begin.';
+            } else {
+                document.getElementById('connectionStatus').innerHTML = 
+                    'Please install MetaMask to use this application.';
+            }
+        });
+    </script>
+</body>
+</html>
