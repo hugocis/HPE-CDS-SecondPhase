@@ -1,0 +1,75 @@
+# Created by https://www.toptal.com/developers/gitignore/api/nextjs
+# Edit at https://www.toptal.com/developers/gitignore?templates=nextjs
+
+### NextJS ###
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# local env files
+.env*.local
+.env
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Node.js dependencies in all subdirectories
+**/node_modules/
+**/package-lock.json
+
+# Logs
+logs/
+*.log
+
+# Data files and temp files
+data/processed/
+data/temp/
+*.csv.tmp
+
+# Database and Prisma
+**/prisma/migrations/
+**/.env
+**/.env.*
+!**/.env.example
+
+# Build and distribution directories
+**/dist/
+**/tmp/
+**/build/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.sublime-*
+*.swp
+
+# End of https://www.toptal.com/developers/gitignore/api/nextjs

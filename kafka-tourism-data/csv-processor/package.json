@@ -1,0 +1,13 @@
+{
+    "name": "csv-processor",
+    "version": "1.0.0",
+    "description": "Process CSV files and publish to Kafka",
+    "main": "index.js",
+    "scripts": {
+      "start": "node index.js"
+    },
+    "dependencies": {
+      "csv-parse": "^5.3.5",
+      "kafkajs": "^2.2.4"
+    }
+  }
