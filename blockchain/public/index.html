@@ -60,11 +60,11 @@
     </div>
 
     <script>
-        const contractAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+        const contractAddress = '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9';
         const contractABI = [
             "function store(uint256 value) public",
             "function retrieve() public view returns (uint256)",
-            "event ValueChanged(uint256 newValue)"
+            "event ValueChanged(uint256 oldValue, uint256 newValue, uint256 addedValue)"
         ];
 
         const HARDHAT_NETWORK = {
@@ -184,14 +184,20 @@
                     return;
                 }
                 
-                console.log('Intentando almacenar el valor:', value);
+                console.log('Intentando añadir el valor:', value);
                 const tx = await contract.store(value);
                 console.log('Transacción enviada:', tx.hash);
                 
                 const receipt = await tx.wait();
                 console.log('Transacción confirmada:', receipt);
                 
-                alert('Valor almacenado exitosamente!');
+                // Mostrar información sobre el cambio del valor
+                const event = receipt.events.find(e => e.event === 'ValueChanged');
+                if (event) {
+                    const [oldValue, newValue, addedValue] = event.args;
+                    alert(`Valor añadido exitosamente!\nValor anterior: ${oldValue}\nValor añadido: ${addedValue}\nNuevo total: ${newValue}`);
+                }
+                
                 retrieveNumber();
             } catch (error) {
                 console.error('Error detallado:', error);
