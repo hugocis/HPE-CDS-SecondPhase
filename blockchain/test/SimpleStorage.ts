@@ -1,37 +1,33 @@
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { SimpleStorage } from "../typechain-types";
 
 describe("SimpleStorage", function () {
-  let simpleStorage: SimpleStorage;
-
-  beforeEach(async function () {
-    // Deploy a new SimpleStorage contract before each test
+  async function deploySimpleStorageFixture() {
     const SimpleStorage = await ethers.getContractFactory("SimpleStorage");
-    simpleStorage = await SimpleStorage.deploy();
-    await simpleStorage.waitForDeployment();
-  });
+    const simpleStorage = await SimpleStorage.deploy();
+    return { simpleStorage };
+  }
 
-  it("Should return 0 by default", async function () {
-    expect(await simpleStorage.retrieve()).to.equal(0);
-  });
+  describe("Deployment", function () {
+    it("Should return 0 by default", async function () {
+      const { simpleStorage } = await loadFixture(deploySimpleStorageFixture);
+      expect(await simpleStorage.retrieve()).to.equal(0);
+    });
 
-  it("Should store and retrieve a value", async function () {
-    // Store a value
-    const storeValue = 42;
-    await simpleStorage.store(storeValue);
+    it("Should store and retrieve a value", async function () {
+      const { simpleStorage } = await loadFixture(deploySimpleStorageFixture);
+      const storeValue = 42;
+      await simpleStorage.store(storeValue);
+      expect(await simpleStorage.retrieve()).to.equal(storeValue);
+    });
 
-    // Retrieve the value
-    const value = await simpleStorage.retrieve();
-    expect(value).to.equal(storeValue);
-  });
-
-  it("Should emit ValueChanged event when storing a value", async function () {
-    const storeValue = 100;
-    
-    // Check if the event is emitted with the correct value
-    await expect(simpleStorage.store(storeValue))
-      .to.emit(simpleStorage, "ValueChanged")
-      .withArgs(storeValue);
+    it("Should emit ValueChanged event when storing a value", async function () {
+      const { simpleStorage } = await loadFixture(deploySimpleStorageFixture);
+      const storeValue = 100;
+      await expect(simpleStorage.store(storeValue))
+        .to.emit(simpleStorage, "ValueChanged")
+        .withArgs(storeValue);
+    });
   });
 });
