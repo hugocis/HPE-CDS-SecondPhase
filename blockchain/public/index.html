@@ -696,9 +696,20 @@
                 const receipt = await tx.wait();
                 console.log('Transacción confirmada:', receipt);
                 
-                const event = receipt.events.find(e => e.event === 'ValueChanged');
-                if (event) {
-                    const [oldValue, newValue, addedValue] = event.args;
+                // En ethers v6, los eventos se acceden directamente desde el receipt.logs
+                const valueChangedEvent = receipt.logs.find(
+                    log => {
+                        try {
+                            return contract.interface.parseLog(log)?.name === 'ValueChanged';
+                        } catch (e) {
+                            return false;
+                        }
+                    }
+                );
+
+                if (valueChangedEvent) {
+                    const parsedLog = contract.interface.parseLog(valueChangedEvent);
+                    const [account, oldValue, newValue, addedValue] = parsedLog.args;
                     alert(`Tokens minteados exitosamente!\nBalance anterior: ${oldValue}\nTokens minteados: ${addedValue}\nNuevo balance: ${newValue}`);
                 }
                 
@@ -706,8 +717,7 @@
             } catch (error) {
                 console.error('Error detallado:', error);
                 alert('Error al mintear tokens: ' + 
-                    (error.reason || error.message || 'Error desconocido') + 
-                    '\nCódigo: ' + (error.code || 'N/A'));
+                    (error.reason || error.message || 'Error desconocido'));
             }
         }
 
@@ -730,10 +740,20 @@
                 const receipt = await tx.wait();
                 console.log('Transacción confirmada:', receipt);
                 
-                // Mostrar información sobre el cambio del valor
-                const event = receipt.events.find(e => e.event === 'ValueBurned');
-                if (event) {
-                    const [oldValue, newValue, burnedAmount] = event.args;
+                // En ethers v6, los eventos se acceden directamente desde el receipt.logs
+                const valueBurnedEvent = receipt.logs.find(
+                    log => {
+                        try {
+                            return contract.interface.parseLog(log)?.name === 'ValueBurned';
+                        } catch (e) {
+                            return false;
+                        }
+                    }
+                );
+                
+                if (valueBurnedEvent) {
+                    const parsedLog = contract.interface.parseLog(valueBurnedEvent);
+                    const [account, oldValue, newValue, burnedAmount] = parsedLog.args;
                     alert(`Valor quemado exitosamente!\nValor anterior: ${oldValue}\nValor quemado: ${burnedAmount}\nNuevo total: ${newValue}`);
                 }
                 
@@ -742,7 +762,6 @@
                 console.error('Error detallado:', error);
                 let errorMessage = error.reason || error.message || 'Error desconocido';
                 
-                // Mejorar el mensaje de error para el caso específico de quemar más del valor disponible
                 if (errorMessage.includes("Cannot burn more than the stored value")) {
                     errorMessage = "No puedes quemar más del valor almacenado actualmente";
                 }
