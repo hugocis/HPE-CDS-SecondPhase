@@ -39,3 +39,38 @@ yarn-error.log*
 next-env.d.ts
 
 # End of https://www.toptal.com/developers/gitignore/api/nextjs
+
+### Project Specific ###
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Node.js dependencies in all subdirectories
+**/node_modules/
+**/package-lock.json
+
+# Logs
+logs/
+*.log
+
+# Data files and temp files
+data/processed/
+data/temp/
+*.csv.tmp
+
+# Database and Prisma
+**/prisma/migrations/
+**/.env
+**/.env.*
+!**/.env.example
+
+# Build and distribution directories
+**/dist/
+**/tmp/
+**/build/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.sublime-*
+*.swp
