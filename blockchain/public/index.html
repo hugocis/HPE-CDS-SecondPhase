@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SimpleStorage Interface</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -67,56 +67,137 @@
             "event ValueChanged(uint256 newValue)"
         ];
 
+        const HARDHAT_NETWORK = {
+            chainId: '0x7A69', // 31337 in hex
+            chainName: 'Hardhat Local',
+            nativeCurrency: {
+                name: 'Ethereum',
+                symbol: 'ETH',
+                decimals: 18
+            },
+            rpcUrls: ['http://127.0.0.1:8545']
+        };
+
         let provider;
         let signer;
         let contract;
 
+        async function switchToHardhatNetwork() {
+            try {
+                // Intenta cambiar a la red de Hardhat
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: HARDHAT_NETWORK.chainId }],
+                });
+            } catch (switchError) {
+                // Si la red no existe, intentamos añadirla
+                if (switchError.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [HARDHAT_NETWORK],
+                        });
+                    } catch (addError) {
+                        throw new Error('No se pudo añadir la red de Hardhat');
+                    }
+                } else {
+                    throw switchError;
+                }
+            }
+        }
+
         async function connectWallet() {
             try {
                 if (typeof window.ethereum !== 'undefined') {
-                    // Request account access
+                    // Primero intentamos cambiar a la red de Hardhat
+                    await switchToHardhatNetwork();
+                    
+                    // Solicitamos acceso a la cuenta
                     await window.ethereum.request({ method: 'eth_requestAccounts' });
                     
                     provider = new ethers.providers.Web3Provider(window.ethereum);
+                    
+                    // Verificamos que estamos en la red correcta
+                    const network = await provider.getNetwork();
+                    if (network.chainId !== 31337) {
+                        throw new Error('Por favor, conecta MetaMask a la red de Hardhat');
+                    }
+                    
                     signer = provider.getSigner();
                     contract = new ethers.Contract(contractAddress, contractABI, signer);
                     
                     const address = await signer.getAddress();
                     document.getElementById('connectionStatus').innerHTML = 
-                        'Connected: ' + address.substring(0, 6) + '...' + address.substring(38);
+                        'Conectado a Hardhat: ' + address.substring(0, 6) + '...' + address.substring(38);
+
+                    // Agregamos listener para cambios de red
+                    window.ethereum.on('chainChanged', () => {
+                        window.location.reload();
+                    });
                 }
             } catch (error) {
                 console.error('Error connecting to MetaMask:', error);
                 document.getElementById('connectionStatus').innerHTML = 
-                    'Error connecting: ' + error.message;
-            }
-        }
-
-        async function storeNumber() {
-            try {
-                const value = document.getElementById('storeValue').value;
-                if (!value) {
-                    alert('Please enter a value');
-                    return;
-                }
-                
-                const tx = await contract.store(value);
-                await tx.wait();
-                alert('Value stored successfully!');
-                retrieveNumber();
-            } catch (error) {
-                console.error('Error storing value:', error);
-                alert('Error storing value: ' + error.message);
+                    'Error de conexión: ' + error.message;
             }
         }
 
         async function retrieveNumber() {
             try {
+                if (!contract) {
+                    throw new Error('El contrato no está inicializado. Por favor, conecta tu wallet primero.');
+                }
+                
+                const network = await provider.getNetwork();
+                console.log('Red actual:', network);
+                
+                // Verificar el balance de la cuenta
+                const address = await signer.getAddress();
+                const balance = await provider.getBalance(address);
+                console.log('Balance de la cuenta:', ethers.utils.formatEther(balance), 'ETH');
+                
+                // Verificar que el contrato existe
+                const code = await provider.getCode(contractAddress);
+                if (code === '0x') {
+                    throw new Error('No se encontró código en la dirección del contrato. Asegúrate de que el contrato está desplegado.');
+                }
+
                 const value = await contract.retrieve();
                 document.getElementById('currentValue').innerHTML = value.toString();
             } catch (error) {
-                console.error('Error retrieving value:', error);
-                document.getElementById('currentValue').innerHTML = 'Error: ' + error.message;
+                console.error('Error detallado:', error);
+                document.getElementById('currentValue').innerHTML = 'Error: ' + 
+                    (error.reason || error.message || 'Error desconocido') + 
+                    '<br>Código: ' + (error.code || 'N/A');
+            }
+        }
+
+        async function storeNumber() {
+            try {
+                if (!contract) {
+                    throw new Error('El contrato no está inicializado. Por favor, conecta tu wallet primero.');
+                }
+
+                const value = document.getElementById('storeValue').value;
+                if (!value) {
+                    alert('Por favor, ingresa un valor');
+                    return;
+                }
+                
+                console.log('Intentando almacenar el valor:', value);
+                const tx = await contract.store(value);
+                console.log('Transacción enviada:', tx.hash);
+                
+                const receipt = await tx.wait();
+                console.log('Transacción confirmada:', receipt);
+                
+                alert('Valor almacenado exitosamente!');
+                retrieveNumber();
+            } catch (error) {
+                console.error('Error detallado:', error);
+                alert('Error al almacenar el valor: ' + 
+                    (error.reason || error.message || 'Error desconocido') + 
+                    '\nCódigo: ' + (error.code || 'N/A'));
             }
         }
 
