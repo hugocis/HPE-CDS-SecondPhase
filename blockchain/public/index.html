@@ -18,6 +18,12 @@
             border-radius: 8px;
             margin-top: 20px;
         }
+        .admin-section {
+            background-color: #e8f5e9;
+        }
+        .transfer-section {
+            background-color: #e3f2fd;
+        }
         button {
             background-color: #4CAF50;
             color: white;
@@ -30,11 +36,32 @@
         button:hover {
             background-color: #45a049;
         }
+        button.danger {
+            background-color: #f44336;
+        }
+        button.danger:hover {
+            background-color: #da190b;
+        }
         input {
             padding: 8px;
             margin: 5px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            width: 200px;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 5px;
+        }
+        .status.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .status.paused {
+            background-color: #f44336;
+            color: white;
         }
     </style>
 </head>
@@ -45,6 +72,19 @@
         <h2>Connection Status</h2>
         <p id="connectionStatus">Not connected to MetaMask</p>
         <button onclick="connectWallet()">Connect Wallet</button>
+        <p>Contract Status: <span id="contractStatus" class="status">Checking...</span></p>
+        <p>Your Role: <span id="userRole">Unknown</span></p>
+    </div>
+
+    <div class="container admin-section" id="adminSection" style="display: none;">
+        <h2>Administrative Functions</h2>
+        <button onclick="togglePause()" id="pauseButton">Pause Contract</button>
+        <div>
+            <h3>Manage Administrators</h3>
+            <input type="text" id="adminAddress" placeholder="Administrator address">
+            <button onclick="addAdmin()">Add Admin</button>
+            <button onclick="removeAdmin()">Remove Admin</button>
+        </div>
     </div>
 
     <div class="container">
@@ -59,94 +99,160 @@
         <button onclick="burnNumber()">Burn Value</button>
     </div>
 
+    <div class="container transfer-section">
+        <h2>Transfer Value</h2>
+        <input type="text" id="transferTo" placeholder="Recipient address">
+        <input type="number" id="transferAmount" placeholder="Amount to transfer">
+        <button onclick="transferValue()">Transfer</button>
+    </div>
+
     <div class="container">
-        <h2>Retrieve Value</h2>
-        <button onclick="retrieveNumber()">Retrieve</button>
-        <p>Current Value: <span id="currentValue">Not retrieved yet</span></p>
+        <h2>Account Balance</h2>
+        <button onclick="retrieveNumber()">Refresh Balance</button>
+        <p>Your Balance: <span id="currentValue">Not retrieved yet</span></p>
+        <input type="text" id="balanceCheckAddress" placeholder="Check address balance">
+        <button onclick="checkBalance()">Check Balance</button>
+        <p>Address Balance: <span id="addressBalance">Not checked</span></p>
     </div>
 
     <script>
-        const contractAddress = '0x5FC8d32690cc91D4c39d9d3abcBD16989F875707';
+        const contractAddress = '0x8A791620dd6260079BF849Dc5567aDC3F2FdC318';
         const contractABI = [
             "function store(uint256 value) public",
             "function burn(uint256 amount) public",
             "function retrieve() public view returns (uint256)",
-            "event ValueChanged(uint256 oldValue, uint256 newValue, uint256 addedValue)",
-            "event ValueBurned(uint256 oldValue, uint256 newValue, uint256 burnedAmount)"
+            "function transfer(address to, uint256 amount) public",
+            "function balanceOf(address account) public view returns (uint256)",
+            "function owner() public view returns (address)",
+            "function paused() public view returns (bool)",
+            "function isAdmin(address account) public view returns (bool)",
+            "function pause() public",
+            "function unpause() public",
+            "function addAdmin(address account) public",
+            "function removeAdmin(address account) public",
+            "event ValueChanged(address indexed account, uint256 oldValue, uint256 newValue, uint256 addedValue)",
+            "event ValueBurned(address indexed account, uint256 oldValue, uint256 newValue, uint256 burnedAmount)",
+            "event Transfer(address indexed from, address indexed to, uint256 value)",
+            "event AdminAdded(address indexed account)",
+            "event AdminRemoved(address indexed account)",
+            "event ContractPaused(address indexed by)",
+            "event ContractUnpaused(address indexed by)"
         ];
-
-        const HARDHAT_NETWORK = {
-            chainId: '0x7A69', // 31337 in hex
-            chainName: 'Hardhat Local',
-            nativeCurrency: {
-                name: 'Ethereum',
-                symbol: 'ETH',
-                decimals: 18
-            },
-            rpcUrls: ['http://127.0.0.1:8545']
-        };
 
         let provider;
         let signer;
         let contract;
+        let userAddress;
 
-        async function switchToHardhatNetwork() {
+        async function updateContractStatus() {
             try {
-                // Intenta cambiar a la red de Hardhat
-                await window.ethereum.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: HARDHAT_NETWORK.chainId }],
-                });
-            } catch (switchError) {
-                // Si la red no existe, intentamos añadirla
-                if (switchError.code === 4902) {
-                    try {
-                        await window.ethereum.request({
-                            method: 'wallet_addEthereumChain',
-                            params: [HARDHAT_NETWORK],
-                        });
-                    } catch (addError) {
-                        throw new Error('No se pudo añadir la red de Hardhat');
-                    }
-                } else {
-                    throw switchError;
-                }
+                const isPaused = await contract.paused();
+                const statusElement = document.getElementById('contractStatus');
+                statusElement.textContent = isPaused ? 'PAUSED' : 'ACTIVE';
+                statusElement.className = 'status ' + (isPaused ? 'paused' : 'active');
+                
+                // Update pause button text
+                const pauseButton = document.getElementById('pauseButton');
+                pauseButton.textContent = isPaused ? 'Unpause Contract' : 'Pause Contract';
+            } catch (error) {
+                console.error('Error updating contract status:', error);
             }
         }
 
-        async function connectWallet() {
+        async function updateUserRole() {
             try {
-                if (typeof window.ethereum !== 'undefined') {
-                    // Primero intentamos cambiar a la red de Hardhat
-                    await switchToHardhatNetwork();
-                    
-                    // Solicitamos acceso a la cuenta
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    
-                    provider = new ethers.providers.Web3Provider(window.ethereum);
-                    
-                    // Verificamos que estamos en la red correcta
-                    const network = await provider.getNetwork();
-                    if (network.chainId !== 31337) {
-                        throw new Error('Por favor, conecta MetaMask a la red de Hardhat');
-                    }
-                    
-                    signer = provider.getSigner();
-                    contract = new ethers.Contract(contractAddress, contractABI, signer);
-                    
-                    const address = await signer.getAddress();
-                    document.getElementById('connectionStatus').innerHTML = 
-                        'Conectado a Hardhat: ' + address.substring(0, 6) + '...' + address.substring(38);
-
-                    // Agregamos listener para cambios de red
-                    window.ethereum.on('chainChanged', () => {
-                        window.location.reload();
-                    });
+                const ownerAddress = await contract.owner();
+                const isUserAdmin = await contract.isAdmin(userAddress);
+                let role = 'User';
+                
+                if (userAddress.toLowerCase() === ownerAddress.toLowerCase()) {
+                    role = 'Owner';
+                } else if (isUserAdmin) {
+                    role = 'Administrator';
                 }
+                
+                document.getElementById('userRole').textContent = role;
+                document.getElementById('adminSection').style.display = 
+                    (role === 'Owner' || role === 'Administrator') ? 'block' : 'none';
             } catch (error) {
-                console.error('Error connecting to MetaMask:', error);
-                document.getElementById('connectionStatus').innerHTML = 
-                    'Error de conexión: ' + error.message;
+                console.error('Error updating user role:', error);
+            }
+        }
+
+        async function togglePause() {
+            try {
+                const isPaused = await contract.paused();
+                const tx = isPaused ? 
+                    await contract.unpause() :
+                    await contract.pause();
+                await tx.wait();
+                updateContractStatus();
+                alert(`Contract ${isPaused ? 'unpaused' : 'paused'} successfully!`);
+            } catch (error) {
+                alert('Error toggling pause state: ' + (error.reason || error.message));
+            }
+        }
+
+        async function addAdmin() {
+            try {
+                const address = document.getElementById('adminAddress').value;
+                if (!ethers.utils.isAddress(address)) {
+                    throw new Error('Invalid address format');
+                }
+                const tx = await contract.addAdmin(address);
+                await tx.wait();
+                alert('Administrator added successfully!');
+            } catch (error) {
+                alert('Error adding administrator: ' + (error.reason || error.message));
+            }
+        }
+
+        async function removeAdmin() {
+            try {
+                const address = document.getElementById('adminAddress').value;
+                if (!ethers.utils.isAddress(address)) {
+                    throw new Error('Invalid address format');
+                }
+                const tx = await contract.removeAdmin(address);
+                await tx.wait();
+                alert('Administrator removed successfully!');
+            } catch (error) {
+                alert('Error removing administrator: ' + (error.reason || error.message));
+            }
+        }
+
+        async function transferValue() {
+            try {
+                const to = document.getElementById('transferTo').value;
+                const amount = document.getElementById('transferAmount').value;
+                
+                if (!ethers.utils.isAddress(to)) {
+                    throw new Error('Invalid recipient address');
+                }
+                if (!amount || amount <= 0) {
+                    throw new Error('Invalid amount');
+                }
+
+                const tx = await contract.transfer(to, amount);
+                await tx.wait();
+                alert('Transfer successful!');
+                retrieveNumber();
+            } catch (error) {
+                alert('Error transferring value: ' + (error.reason || error.message));
+            }
+        }
+
+        async function checkBalance() {
+            try {
+                const address = document.getElementById('balanceCheckAddress').value;
+                if (!ethers.utils.isAddress(address)) {
+                    throw new Error('Invalid address format');
+                }
+                const balance = await contract.balanceOf(address);
+                document.getElementById('addressBalance').textContent = balance.toString();
+            } catch (error) {
+                document.getElementById('addressBalance').textContent = 
+                    'Error: ' + (error.reason || error.message);
             }
         }
 
@@ -252,6 +358,34 @@
                 }
                 
                 alert('Error al quemar el valor: ' + errorMessage);
+            }
+        }
+
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    contract = new ethers.Contract(contractAddress, contractABI, signer);
+                    
+                    userAddress = await signer.getAddress();
+                    document.getElementById('connectionStatus').innerHTML = 
+                        'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(38);
+
+                    // Initialize contract state
+                    await updateContractStatus();
+                    await updateUserRole();
+
+                    // Add listeners for network and account changes
+                    window.ethereum.on('chainChanged', () => window.location.reload());
+                    window.ethereum.on('accountsChanged', () => window.location.reload());
+                }
+            } catch (error) {
+                console.error('Error connecting to MetaMask:', error);
+                document.getElementById('connectionStatus').innerHTML = 
+                    'Error connecting: ' + error.message;
             }
         }
 
