@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleStorage Interface</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .admin-section {
+            background-color: #e8f5e9;
+        }
+        .transfer-section {
+            background-color: #e3f2fd;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.danger {
+            background-color: #f44336;
+        }
+        button.danger:hover {
+            background-color: #da190b;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 5px;
+        }
+        .status.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .status.paused {
+            background-color: #f44336;
+            color: white;
+        }
+        .user-section {
+            background-color: #fff3e0;
+        }
+        .error {
+            color: #f44336;
+            margin: 5px 0;
+        }
+        .success {
+            color: #4CAF50;
+            margin: 5px 0;
+        }
+        .wallet-section {
+            background-color: #e8eaf6;
+            margin-bottom: 20px;
+        }
+        .generated-wallet-info {
+            background-color: #fff3e0;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .warning {
+            color: #ff5722;
+            font-weight: bold;
+        }
+        .secret-key {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+        .dev-banner {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ffeeba;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .contract-info {
+            background-color: #e8f5e9;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .verify-box {
+            background-color: #e3f2fd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="dev-banner">
+        ⚠️ Entorno de Desarrollo Local - Red Hardhat
+        <br>
+        <small>Las advertencias de MetaMask son normales en este entorno</small>
+    </div>
+    
+    <h1>EcoToken Interface</h1>
+    
+    <div class="container">
+        <h2>Connection Status</h2>
+        <p id="connectionStatus">Not connected to MetaMask</p>
+        <button onclick="connectWallet()">Connect Wallet</button>
+        <p>Contract Status: <span id="contractStatus" class="status">Checking...</span></p>
+        <p>Your Role: <span id="userRole">Unknown</span></p>
+        <div class="contract-info">
+            <h3>Información de Contratos</h3>
+            <p>SimpleStorage: <span id="simpleStorageAddress">Cargando...</span></p>
+            <p>UserRegistry: <span id="userRegistryAddress">Cargando...</span></p>
+        </div>
+    </div>
+
+    <div class="container wallet-section">
+        <h2>Registro de Usuario</h2>
+        <div id="walletChoiceSection">
+            <h3>Elige cómo quieres registrarte:</h3>
+            <button onclick="showMetaMaskRegistration()">Usar MetaMask</button>
+            <button onclick="showNewWalletRegistration()">Crear Nueva Cartera</button>
+        </div>
+
+        <div id="metamaskRegistration" style="display: none;">
+            <h3>Registro con MetaMask</h3>
+            <input type="text" id="usernameMetaMask" placeholder="Nombre de usuario">
+            <button onclick="registerWithMetaMask()">Registrar con MetaMask</button>
+        </div>
+
+        <div id="newWalletRegistration" style="display: none;">
+            <h3>Crear Nueva Cartera</h3>
+            <input type="text" id="usernameNewWallet" placeholder="Nombre de usuario">
+            <button onclick="createAndRegisterWallet()">Crear y Registrar Cartera</button>
+            
+            <div id="generatedWalletInfo" class="generated-wallet-info" style="display: none;">
+                <h4>¡Cartera Generada Exitosamente!</h4>
+                <p class="warning">IMPORTANTE: Guarda esta información de forma segura. No la compartas con nadie.</p>
+                <div>
+                    <p><strong>Dirección de la Cartera:</strong><br>
+                    <span id="generatedAddress"></span></p>
+                    
+                    <p><strong>Clave Privada:</strong><br>
+                    <div class="secret-key" id="privateKey"></div></p>
+                    
+                    <button onclick="downloadWalletInfo()">Descargar Información de la Cartera</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container admin-section" id="adminSection" style="display: none;">
+        <h2>Administrative Functions</h2>
+        <button onclick="togglePause()" id="pauseButton">Pause Contract</button>
+        <div>
+            <h3>Manage Administrators</h3>
+            <input type="text" id="adminAddress" placeholder="Administrator address">
+            <button onclick="addAdmin()">Add Admin</button>
+            <button onclick="removeAdmin()">Remove Admin</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Store Value</h2>
+        <input type="number" id="storeValue" placeholder="Enter a number to add">
+        <button onclick="storeNumber()">Add Value</button>
+    </div>
+
+    <div class="container">
+        <h2>Burn Value</h2>
+        <input type="number" id="burnValue" placeholder="Enter a number to burn">
+        <button onclick="burnNumber()">Burn Value</button>
+    </div>
+
+    <div class="container transfer-section">
+        <h2>Transfer Value</h2>
+        <input type="text" id="transferTo" placeholder="Recipient address">
+        <input type="number" id="transferAmount" placeholder="Amount to transfer">
+        <button onclick="transferValue()">Transfer</button>
+    </div>
+
+    <div class="container">
+        <h2>Account Balance</h2>
+        <button onclick="retrieveNumber()">Refresh Balance</button>
+        <p>Your Balance: <span id="currentValue">Not retrieved yet</span></p>
+        <input type="text" id="balanceCheckAddress" placeholder="Check address balance">
+        <button onclick="checkBalance()">Check Balance</button>
+        <p>Address Balance: <span id="addressBalance">Not checked</span></p>
+    </div>
+
+    <script>
+        let contractAddress;
+        let registryAddress;
+        const contractABI = [
+            "function store(uint256 value) public",
+            "function burn(uint256 amount) public",
+            "function retrieve() public view returns (uint256)",
+            "function transfer(address to, uint256 amount) public",
+            "function balanceOf(address account) public view returns (uint256)",
+            "function owner() public view returns (address)",
+            "function paused() public view returns (bool)",
+            "function isAdmin(address account) public view returns (bool)",
+            "function pause() public",
+            "function unpause() public",
+            "function addAdmin(address account) public",
+            "function removeAdmin(address account) public",
+            "event ValueChanged(address indexed account, uint256 oldValue, uint256 newValue, uint256 addedValue)",
+            "event ValueBurned(address indexed account, uint256 oldValue, uint256 newValue, uint256 burnedAmount)",
+            "event Transfer(address indexed from, address indexed to, uint256 value)",
+            "event AdminAdded(address indexed account)",
+            "event AdminRemoved(address indexed account)",
+            "event ContractPaused(address indexed by)",
+            "event ContractUnpaused(address indexed by)"
+        ];
+
+        const registryABI = [
+            "function registerWithExistingWallet(string username) public",
+            "function registerWithGeneratedWallet(string username, address generatedAddress) public",
+            "function updateUsername(string newUsername) public",
+            "function isRegistered(address userAddress) public view returns (bool)",
+            "function getUserDetails(address userAddress) public view returns (string username, uint256 registrationDate, bool isGeneratedWallet, address linkedWallet)",
+            "function isGeneratedWallet(address userAddress) public view returns (bool)",
+            "event UserRegistered(address indexed userAddress, string username, uint256 timestamp, bool isGeneratedWallet)",
+            "event UserUpdated(address indexed userAddress, string newUsername, uint256 timestamp)",
+            "event WalletGenerated(address indexed userAddress, string username)",
+            "event WalletLinked(address indexed userAddress, address indexed linkedWallet, string username)"
+        ];
+
+        let provider;
+        let signer;
+        let contract;
+        let userAddress;
+        let registryContract;
+
+        // Añadir función para mostrar dialog de verificación
+        async function showVerificationDialog(action, value) {
+            const verifyBox = document.createElement('div');
+            verifyBox.className = 'verify-box';
+            verifyBox.innerHTML = `
+                <h4>Verificación de Transacción</h4>
+                <p>Estás por realizar la siguiente acción:</p>
+                <ul>
+                    <li><strong>Acción:</strong> ${action}</li>
+                    <li><strong>Valor:</strong> ${value}</li>
+                    <li><strong>Contrato:</strong> ${contractAddress}</li>
+                </ul>
+                <p>⚠️ MetaMask mostrará una advertencia porque estamos en un entorno de desarrollo local.</p>
+                <p>✅ Es seguro continuar si los datos anteriores son correctos.</p>
+            `;
+            
+            document.querySelector('.container').insertBefore(verifyBox, document.querySelector('.container').firstChild);
+            setTimeout(() => verifyBox.remove(), 10000);
+        }
+
+        async function retrieveNumber() {
+            try {
+                if (!contract) {
+                    throw new Error('El contrato no está inicializado. Por favor, conecta tu wallet primero.');
+                }
+                
+                // Verificar la conexión al nodo
+                try {
+                    await provider.getNetwork();
+                } catch (networkError) {
+                    console.error('Error de red:', networkError);
+                    // Intentar reconectar
+                    await connectWallet();
+                    return;
+                }
+                
+                // Verificar el balance de la cuenta
+                const address = await signer.getAddress();
+                const balance = await provider.getBalance(address);
+                console.log('Balance de la cuenta:', ethers.formatEther(balance), 'ETH');
+                
+                // Verificar que el contrato existe y obtener su código
+                const code = await provider.getCode(contractAddress);
+                if (code === '0x') {
+                    // Si el contrato no existe, probablemente el nodo se reinició
+                    // Recargar las direcciones y reconectar
+                    await loadContractAddresses();
+                    await initializeContracts();
+                    return;
+                }
+
+                const value = await contract.retrieve();
+                document.getElementById('currentValue').innerHTML = value.toString();
+            } catch (error) {
+                console.error('Error detallado:', error);
+                
+                // Mejorar los mensajes de error
+                let errorMessage = 'Error desconocido';
+                if (error.code === 'NETWORK_ERROR') {
+                    errorMessage = 'Error de conexión con la red. Por favor, verifica que el nodo Hardhat esté funcionando.';
+                } else if (error.code === 'INVALID_ARGUMENT') {
+                    errorMessage = 'Error en los argumentos. Verifica que las direcciones de los contratos sean correctas.';
+                } else if (error.code === 'CALL_EXCEPTION') {
+                    errorMessage = 'Error al llamar al contrato. Verifica que el contrato esté desplegado y funcionando.';
+                } else {
+                    errorMessage = error.reason || error.message || error;
+                }
+                
+                document.getElementById('currentValue').innerHTML = 
+                    'Error: ' + errorMessage + 
+                    (error.code ? '<br>Código: ' + error.code : '');
+                
+                // Si el error parece ser de conexión, intentar reconectar
+                if (error.code === 'NETWORK_ERROR' || error.message?.includes('network')) {
+                    setTimeout(async () => {
+                        console.log('Intentando reconectar...');
+                        await connectWallet();
+                    }, 2000);
+                }
+            }
+        }
+
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    provider = new ethers.BrowserProvider(window.ethereum);
+                    signer = await provider.getSigner();
+                    userAddress = await signer.getAddress();
+                    
+                    document.getElementById('connectionStatus').innerHTML = 
+                        'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(38);
+
+                    await initializeContracts();
+                    await updateContractStatus();
+                    await updateUserRole();
+                    
+                    // Configurar listeners para cambios en la red o cuenta
+                    window.ethereum.removeAllListeners(); // Remover listeners existentes
+                    window.ethereum.on('chainChanged', () => window.location.reload());
+                    window.ethereum.on('accountsChanged', () => window.location.reload());
+                    window.ethereum.on('disconnect', async () => {
+                        console.log('Desconectado de la red. Intentando reconectar...');
+                        setTimeout(connectWallet, 2000);
+                    });
+                }
+            } catch (error) {
+                console.error('Error connecting to MetaMask:', error);
+                document.getElementById('connectionStatus').innerHTML = 
+                    'Error connecting: ' + (error.message || 'Unknown error');
+                
+                // Intentar reconectar si es un error de red
+                if (error.code === 'NETWORK_ERROR' || error.message?.includes('network')) {
+                    setTimeout(connectWallet, 2000);
+                }
+            }
+        }
+
+        // Modificar loadContractAddresses para reintentar si falla
+        async function loadContractAddresses(retryCount = 3) {
+            try {
+                const response = await fetch('/contract-addresses.json');
+                if (!response.ok) {
+                    throw new Error('No se pudieron cargar las direcciones de los contratos');
+                }
+                const addresses = await response.json();
+                contractAddress = addresses.simpleStorage;
+                registryAddress = addresses.userRegistry;
+                
+                if (!contractAddress || !registryAddress) {
+                    throw new Error('Direcciones de contratos no encontradas');
+                }
+                
+                document.getElementById('simpleStorageAddress').textContent = 
+                    `${contractAddress.substring(0, 6)}...${contractAddress.substring(38)}`;
+                document.getElementById('userRegistryAddress').textContent = 
+                    `${registryAddress.substring(0, 6)}...${registryAddress.substring(38)}`;
+                
+                console.log('Direcciones de contratos cargadas:', { contractAddress, registryAddress });
+            } catch (error) {
+                console.error('Error cargando direcciones:', error);
+                if (retryCount > 0) {
+                    console.log(`Reintentando cargar direcciones... (${retryCount} intentos restantes)`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    return loadContractAddresses(retryCount - 1);
+                }
+                document.getElementById('connectionStatus').innerHTML = 
+                    'Error: No se pudieron cargar las direcciones de los contratos. ' + error.message;
+            }
+        }
+
+        async function initializeContracts() {
+            try {
+                if (!contractAddress || !registryAddress) {
+                    await loadContractAddresses();
+                }
+                contract = new ethers.Contract(contractAddress, contractABI, signer);
+                registryContract = new ethers.Contract(registryAddress, registryABI, signer);
+                await checkUserRegistration();
+            } catch (error) {
+                console.error('Error initializing contracts:', error);
+                document.getElementById('connectionStatus').innerHTML = 
+                    'Error: No se pudieron inicializar los contratos. ' + error.message;
+            }
+        }
+
+        // Nuevas funciones para el manejo de carteras
+        function showMetaMaskRegistration() {
+            document.getElementById('metamaskRegistration').style.display = 'block';
+            document.getElementById('newWalletRegistration').style.display = 'none';
+            document.getElementById('walletChoiceSection').style.display = 'none';
+        }
+
+        function showNewWalletRegistration() {
+            document.getElementById('metamaskRegistration').style.display = 'none';
+            document.getElementById('newWalletRegistration').style.display = 'block';
+            document.getElementById('walletChoiceSection').style.display = 'none';
+        }
+
+        async function registerWithMetaMask() {
+            try {
+                const username = document.getElementById('usernameMetaMask').value.trim();
+                if (!username) {
+                    alert('Por favor, ingresa un nombre de usuario');
+                    return;
+                }
+
+                if (!registryContract) {
+                    await connectWallet();
+                }
+
+                const tx = await registryContract.registerWithExistingWallet(username);
+                await tx.wait();
+                
+                alert('¡Registro exitoso con MetaMask!');
+                await checkUserRegistration();
+            } catch (error) {
+                console.error('Error en registro con MetaMask:', error);
+                alert('Error en el registro: ' + (error.reason || error.message));
+            }
+        }
+
+        async function createAndRegisterWallet() {
+            try {
+                const username = document.getElementById('usernameNewWallet').value.trim();
+                if (!username) {
+                    alert('Por favor, ingresa un nombre de usuario');
+                    return;
+                }
+
+                // Generar nueva cartera
+                const wallet = ethers.Wallet.createRandom();
+                
+                // Mostrar información de la cartera
+                document.getElementById('generatedAddress').textContent = wallet.address;
+                document.getElementById('privateKey').textContent = wallet.privateKey;
+                document.getElementById('generatedWalletInfo').style.display = 'block';
+
+                // Registrar la cartera generada
+                if (!registryContract) {
+                    await connectWallet(); // Necesitamos MetaMask para registrar la nueva cartera
+                }
+
+                const tx = await registryContract.registerWithGeneratedWallet(username, wallet.address);
+                await tx.wait();
+
+                // Guardar información de la cartera en el localStorage (encriptada)
+                const walletInfo = {
+                    address: wallet.address,
+                    privateKey: wallet.privateKey,
+                    username: username,
+                    creationDate: new Date().toISOString()
+                };
+                
+                const encryptedInfo = btoa(JSON.stringify(walletInfo)); // Encriptación básica
+                localStorage.setItem(`wallet_${wallet.address}`, encryptedInfo);
+
+                alert('¡Cartera creada y registrada exitosamente!');
+            } catch (error) {
+                console.error('Error creando cartera:', error);
+                alert('Error creando cartera: ' + (error.reason || error.message));
+            }
+        }
+
+        function downloadWalletInfo() {
+            const address = document.getElementById('generatedAddress').textContent;
+            const privateKey = document.getElementById('privateKey').textContent;
+            const username = document.getElementById('usernameNewWallet').value;
+
+            const walletInfo = {
+                address: address,
+                privateKey: privateKey,
+                username: username,
+                creationDate: new Date().toISOString(),
+                network: 'Hardhat Local',
+                warning: 'MANTÉN ESTA INFORMACIÓN SEGURA Y PRIVADA'
+            };
+
+            const blob = new Blob([JSON.stringify(walletInfo, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `wallet-${address.substring(0, 8)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Modificar la función existente de checkUserRegistration
+        async function checkUserRegistration() {
+            try {
+                const isRegistered = await registryContract.isRegistered(userAddress);
+                if (isRegistered) {
+                    const userDetails = await registryContract.getUserDetails(userAddress);
+                    displayUserInfo(userDetails);
+                    document.getElementById('walletChoiceSection').style.display = 'none';
+                    document.getElementById('metamaskRegistration').style.display = 'none';
+                    document.getElementById('newWalletRegistration').style.display = 'none';
+                } else {
+                    document.getElementById('walletChoiceSection').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error checking registration:', error);
+            }
+        }
+
+        // Modificar displayUserInfo para mostrar información adicional
+        function displayUserInfo(userDetails) {
+            document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('userUsername').textContent = userDetails.username;
+            document.getElementById('userRegDate').textContent = 
+                new Date(userDetails.registrationDate * 1000).toLocaleString();
+            
+            // Mostrar tipo de cartera
+            const walletType = userDetails.isGeneratedWallet ? 
+                'Cartera Generada por el Sistema' : 
+                'Cartera MetaMask';
+            document.getElementById('userInfo').innerHTML += `
+                <p>Tipo de Cartera: <strong>${walletType}</strong></p>
+            `;
+        }
+
+        async function updateContractStatus() {
+            try {
+                const isPaused = await contract.paused();
+                const statusElement = document.getElementById('contractStatus');
+                statusElement.textContent = isPaused ? 'PAUSED' : 'ACTIVE';
+                statusElement.className = 'status ' + (isPaused ? 'paused' : 'active');
+                
+                // Update pause button text
+                const pauseButton = document.getElementById('pauseButton');
+                pauseButton.textContent = isPaused ? 'Unpause Contract' : 'Pause Contract';
+            } catch (error) {
+                console.error('Error updating contract status:', error);
+            }
+        }
+
+        async function updateUserRole() {
+            try {
+                const ownerAddress = await contract.owner();
+                const isUserAdmin = await contract.isAdmin(userAddress);
+                let role = 'User';
+                
+                if (userAddress.toLowerCase() === ownerAddress.toLowerCase()) {
+                    role = 'Owner';
+                } else if (isUserAdmin) {
+                    role = 'Administrator';
+                }
+                
+                document.getElementById('userRole').textContent = role;
+                document.getElementById('adminSection').style.display = 
+                    (role === 'Owner' || role === 'Administrator') ? 'block' : 'none';
+            } catch (error) {
+                console.error('Error updating user role:', error);
+            }
+        }
+
+        async function togglePause() {
+            try {
+                const isPaused = await contract.paused();
+                const tx = isPaused ? 
+                    await contract.unpause() :
+                    await contract.pause();
+                await tx.wait();
+                updateContractStatus();
+                alert(`Contract ${isPaused ? 'unpaused' : 'paused'} successfully!`);
+            } catch (error) {
+                alert('Error toggling pause state: ' + (error.reason || error.message));
+            }
+        }
+
+        async function addAdmin() {
+            try {
+                const address = document.getElementById('adminAddress').value;
+                if (!ethers.utils.isAddress(address)) {
+                    throw new Error('Invalid address format');
+                }
+                const tx = await contract.addAdmin(address);
+                await tx.wait();
+                alert('Administrator added successfully!');
+            } catch (error) {
+                alert('Error adding administrator: ' + (error.reason || error.message));
+            }
+        }
+
+        async function removeAdmin() {
+            try {
+                const address = document.getElementById('adminAddress').value;
+                if (!ethers.utils.isAddress(address)) {
+                    throw new Error('Invalid address format');
+                }
+                const tx = await contract.removeAdmin(address);
+                await tx.wait();
+                alert('Administrator removed successfully!');
+            } catch (error) {
+                alert('Error removing administrator: ' + (error.reason || error.message));
+            }
+        }
+
+        async function transferValue() {
+            try {
+                const to = document.getElementById('transferTo').value;
+                const amount = document.getElementById('transferAmount').value;
+                
+                if (!ethers.utils.isAddress(to)) {
+                    throw new Error('Invalid recipient address');
+                }
+                if (!amount || amount <= 0) {
+                    throw new Error('Invalid amount');
+                }
+
+                const tx = await contract.transfer(to, amount);
+                await tx.wait();
+                alert('Transfer successful!');
+                retrieveNumber();
+            } catch (error) {
+                alert('Error transferring value: ' + (error.reason || error.message));
+            }
+        }
+
+        async function checkBalance() {
+            try {
+                const address = document.getElementById('balanceCheckAddress').value;
+                if (!ethers.utils.isAddress(address)) {
+                    throw new Error('Invalid address format');
+                }
+                const balance = await contract.balanceOf(address);
+                document.getElementById('addressBalance').textContent = balance.toString();
+            } catch (error) {
+                document.getElementById('addressBalance').textContent = 
+                    'Error: ' + (error.reason || error.message);
+            }
+        }
+
+        async function storeNumber() {
+            try {
+                if (!contract) {
+                    throw new Error('El contrato no está inicializado. Por favor, conecta tu wallet primero.');
+                }
+
+                const value = document.getElementById('storeValue').value;
+                if (!value) {
+                    alert('Por favor, ingresa un valor');
+                    return;
+                }
+
+                await showVerificationDialog('Mintear Tokens', value);
+                
+                console.log('Intentando añadir el valor:', value);
+                const tx = await contract.store(value);
+                console.log('Transacción enviada:', tx.hash);
+                
+                const receipt = await tx.wait();
+                console.log('Transacción confirmada:', receipt);
+                
+                // En ethers v6, los eventos se acceden directamente desde el receipt.logs
+                const valueChangedEvent = receipt.logs.find(
+                    log => {
+                        try {
+                            return contract.interface.parseLog(log)?.name === 'ValueChanged';
+                        } catch (e) {
+                            return false;
+                        }
+                    }
+                );
+
+                if (valueChangedEvent) {
+                    const parsedLog = contract.interface.parseLog(valueChangedEvent);
+                    const [account, oldValue, newValue, addedValue] = parsedLog.args;
+                    alert(`Tokens minteados exitosamente!\nBalance anterior: ${oldValue}\nTokens minteados: ${addedValue}\nNuevo balance: ${newValue}`);
+                }
+                
+                retrieveNumber();
+            } catch (error) {
+                console.error('Error detallado:', error);
+                alert('Error al mintear tokens: ' + 
+                    (error.reason || error.message || 'Error desconocido'));
+            }
+        }
+
+        async function burnNumber() {
+            try {
+                if (!contract) {
+                    throw new Error('El contrato no está inicializado. Por favor, conecta tu wallet primero.');
+                }
+
+                const value = document.getElementById('burnValue').value;
+                if (!value) {
+                    alert('Por favor, ingresa un valor para quemar');
+                    return;
+                }
+                
+                console.log('Intentando quemar el valor:', value);
+                const tx = await contract.burn(value);
+                console.log('Transacción enviada:', tx.hash);
+                
+                const receipt = await tx.wait();
+                console.log('Transacción confirmada:', receipt);
+                
+                // En ethers v6, los eventos se acceden directamente desde el receipt.logs
+                const valueBurnedEvent = receipt.logs.find(
+                    log => {
+                        try {
+                            return contract.interface.parseLog(log)?.name === 'ValueBurned';
+                        } catch (e) {
+                            return false;
+                        }
+                    }
+                );
+                
+                if (valueBurnedEvent) {
+                    const parsedLog = contract.interface.parseLog(valueBurnedEvent);
+                    const [account, oldValue, newValue, burnedAmount] = parsedLog.args;
+                    alert(`Valor quemado exitosamente!\nValor anterior: ${oldValue}\nValor quemado: ${burnedAmount}\nNuevo total: ${newValue}`);
+                }
+                
+                retrieveNumber();
+            } catch (error) {
+                console.error('Error detallado:', error);
+                let errorMessage = error.reason || error.message || 'Error desconocido';
+                
+                if (errorMessage.includes("Cannot burn more than the stored value")) {
+                    errorMessage = "No puedes quemar más del valor almacenado actualmente";
+                }
+                
+                alert('Error al quemar el valor: ' + errorMessage);
+            }
+        }
+
+        // Modificar el event listener para cargar las direcciones al inicio
+        window.addEventListener('load', async function() {
+            try {
+                await loadContractAddresses();
+                
+                if (typeof window.ethereum !== 'undefined') {
+                    document.getElementById('connectionStatus').innerHTML = 
+                        'MetaMask instalado! Haz click en Conectar Wallet para comenzar.';
+                } else {
+                    document.getElementById('connectionStatus').innerHTML = 
+                        'Por favor instala MetaMask para usar esta aplicación.';
+                }
+            } catch (error) {
+                console.error('Error en la carga inicial:', error);
+            }
+        });
+    </script>
+</body>
+</html>
