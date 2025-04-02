@@ -49,8 +49,14 @@
 
     <div class="container">
         <h2>Store Value</h2>
-        <input type="number" id="storeValue" placeholder="Enter a number">
-        <button onclick="storeNumber()">Store</button>
+        <input type="number" id="storeValue" placeholder="Enter a number to add">
+        <button onclick="storeNumber()">Add Value</button>
+    </div>
+
+    <div class="container">
+        <h2>Burn Value</h2>
+        <input type="number" id="burnValue" placeholder="Enter a number to burn">
+        <button onclick="burnNumber()">Burn Value</button>
     </div>
 
     <div class="container">
@@ -60,11 +66,13 @@
     </div>
 
     <script>
-        const contractAddress = '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9';
+        const contractAddress = '0x5FC8d32690cc91D4c39d9d3abcBD16989F875707';
         const contractABI = [
             "function store(uint256 value) public",
+            "function burn(uint256 amount) public",
             "function retrieve() public view returns (uint256)",
-            "event ValueChanged(uint256 oldValue, uint256 newValue, uint256 addedValue)"
+            "event ValueChanged(uint256 oldValue, uint256 newValue, uint256 addedValue)",
+            "event ValueBurned(uint256 oldValue, uint256 newValue, uint256 burnedAmount)"
         ];
 
         const HARDHAT_NETWORK = {
@@ -204,6 +212,46 @@
                 alert('Error al almacenar el valor: ' + 
                     (error.reason || error.message || 'Error desconocido') + 
                     '\nCódigo: ' + (error.code || 'N/A'));
+            }
+        }
+
+        async function burnNumber() {
+            try {
+                if (!contract) {
+                    throw new Error('El contrato no está inicializado. Por favor, conecta tu wallet primero.');
+                }
+
+                const value = document.getElementById('burnValue').value;
+                if (!value) {
+                    alert('Por favor, ingresa un valor para quemar');
+                    return;
+                }
+                
+                console.log('Intentando quemar el valor:', value);
+                const tx = await contract.burn(value);
+                console.log('Transacción enviada:', tx.hash);
+                
+                const receipt = await tx.wait();
+                console.log('Transacción confirmada:', receipt);
+                
+                // Mostrar información sobre el cambio del valor
+                const event = receipt.events.find(e => e.event === 'ValueBurned');
+                if (event) {
+                    const [oldValue, newValue, burnedAmount] = event.args;
+                    alert(`Valor quemado exitosamente!\nValor anterior: ${oldValue}\nValor quemado: ${burnedAmount}\nNuevo total: ${newValue}`);
+                }
+                
+                retrieveNumber();
+            } catch (error) {
+                console.error('Error detallado:', error);
+                let errorMessage = error.reason || error.message || 'Error desconocido';
+                
+                // Mejorar el mensaje de error para el caso específico de quemar más del valor disponible
+                if (errorMessage.includes("Cannot burn more than the stored value")) {
+                    errorMessage = "No puedes quemar más del valor almacenado actualmente";
+                }
+                
+                alert('Error al quemar el valor: ' + errorMessage);
             }
         }
 

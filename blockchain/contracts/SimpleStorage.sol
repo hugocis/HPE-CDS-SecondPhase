@@ -3,14 +3,15 @@ pragma solidity ^0.8.0;
 
 /**
  * @title SimpleStorage
- * @dev A simple contract to store and accumulate values
+ * @dev A simple contract to store, accumulate and burn values
  */
 contract SimpleStorage {
     // Variable to store the accumulated value
     uint256 private storedValue;
 
-    // Event emitted when the value is changed, showing old and new values
+    // Events
     event ValueChanged(uint256 oldValue, uint256 newValue, uint256 addedValue);
+    event ValueBurned(uint256 oldValue, uint256 newValue, uint256 burnedAmount);
 
     /**
      * @dev Add a new value to the existing stored value
@@ -20,6 +21,17 @@ contract SimpleStorage {
         uint256 oldValue = storedValue;
         storedValue += value;
         emit ValueChanged(oldValue, storedValue, value);
+    }
+
+    /**
+     * @dev Burn (subtract) a value from the stored amount
+     * @param amount The amount to burn
+     */
+    function burn(uint256 amount) public {
+        require(amount <= storedValue, "Cannot burn more than the stored value");
+        uint256 oldValue = storedValue;
+        storedValue -= amount;
+        emit ValueBurned(oldValue, storedValue, amount);
     }
 
     /**
