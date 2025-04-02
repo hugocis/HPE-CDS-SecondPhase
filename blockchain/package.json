@@ -2,11 +2,12 @@
   "name": "blockchain",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "hardhat test",
     "node": "hardhat node",
-    "deploy": "hardhat run scripts/deploy.ts --network localhost"
+    "deploy": "hardhat run scripts/deploy.ts --network localhost",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",

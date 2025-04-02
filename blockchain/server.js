@@ -8,6 +8,13 @@ app.use((req, res, next) => {
     next();
 });
 
+// Enable CORS for all routes
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+});
+
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -18,7 +25,13 @@ app.get('/', (req, res) => {
     res.sendFile(indexPath);
 });
 
-const PORT = 5000;
+// Add a test route to verify server is responding
+app.get('/test', (req, res) => {
+    res.send('Server is working!');
+});
+
+const PORT = 3000;
+const HOST = '127.0.0.1';
 
 // Error handling
 app.use((err, req, res, next) => {
@@ -26,7 +39,7 @@ app.use((err, req, res, next) => {
     res.status(500).send('Something went wrong!');
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+const server = app.listen(PORT, HOST, () => {
+    console.log(`Server running at http://${HOST}:${PORT}`);
     console.log(`Serving files from: ${path.join(__dirname, 'public')}`);
 });
