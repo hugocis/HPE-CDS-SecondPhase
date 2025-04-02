@@ -63,10 +63,21 @@
             background-color: #f44336;
             color: white;
         }
+        .user-section {
+            background-color: #fff3e0;
+        }
+        .error {
+            color: #f44336;
+            margin: 5px 0;
+        }
+        .success {
+            color: #4CAF50;
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
-    <h1>SimpleStorage Interface</h1>
+    <h1>EcoToken Interface</h1>
     
     <div class="container">
         <h2>Connection Status</h2>
@@ -74,6 +85,22 @@
         <button onclick="connectWallet()">Connect Wallet</button>
         <p>Contract Status: <span id="contractStatus" class="status">Checking...</span></p>
         <p>Your Role: <span id="userRole">Unknown</span></p>
+    </div>
+
+    <div class="container user-section">
+        <h2>User Registration</h2>
+        <div id="registrationStatus"></div>
+        <div id="registrationForm">
+            <input type="text" id="username" placeholder="Enter username">
+            <button onclick="registerUser()">Register</button>
+        </div>
+        <div id="userInfo" style="display: none;">
+            <h3>Your User Details</h3>
+            <p>Username: <span id="userUsername"></span></p>
+            <p>Registration Date: <span id="userRegDate"></span></p>
+            <input type="text" id="newUsername" placeholder="New username">
+            <button onclick="updateUsername()">Update Username</button>
+        </div>
     </div>
 
     <div class="container admin-section" id="adminSection" style="display: none;">
@@ -116,7 +143,8 @@
     </div>
 
     <script>
-        const contractAddress = '0x8A791620dd6260079BF849Dc5567aDC3F2FdC318';
+        const contractAddress = '0x68B1D87F95878fE05B998F19b66F4baba5De1aed';
+        const registryAddress = '0x3Aa5ebB10DC797CAC828524e59A333d0A371443c';
         const contractABI = [
             "function store(uint256 value) public",
             "function burn(uint256 amount) public",
@@ -139,10 +167,95 @@
             "event ContractUnpaused(address indexed by)"
         ];
 
+        const registryABI = [
+            "function registerUser(string username) public",
+            "function updateUsername(string newUsername) public",
+            "function isRegistered(address userAddress) public view returns (bool)",
+            "function getUserDetails(address userAddress) public view returns (string username, uint256 registrationDate)",
+            "event UserRegistered(address indexed userAddress, string username, uint256 timestamp)",
+            "event UserUpdated(address indexed userAddress, string newUsername, uint256 timestamp)"
+        ];
+
         let provider;
         let signer;
         let contract;
         let userAddress;
+        let registryContract;
+
+        async function initializeContracts() {
+            contract = new ethers.Contract(contractAddress, contractABI, signer);
+            registryContract = new ethers.Contract(registryAddress, registryABI, signer);
+            await checkUserRegistration();
+        }
+
+        async function checkUserRegistration() {
+            try {
+                const isRegistered = await registryContract.isRegistered(userAddress);
+                if (isRegistered) {
+                    const userDetails = await registryContract.getUserDetails(userAddress);
+                    displayUserInfo(userDetails);
+                } else {
+                    document.getElementById('registrationForm').style.display = 'block';
+                    document.getElementById('userInfo').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error checking registration:', error);
+            }
+        }
+
+        async function registerUser() {
+            try {
+                const username = document.getElementById('username').value.trim();
+                if (!username) {
+                    alert('Please enter a username');
+                    return;
+                }
+
+                const tx = await registryContract.registerUser(username);
+                document.getElementById('registrationStatus').innerHTML = 
+                    '<p class="success">Registering... Please wait.</p>';
+                
+                await tx.wait();
+                document.getElementById('registrationStatus').innerHTML = 
+                    '<p class="success">Registration successful!</p>';
+                
+                await checkUserRegistration();
+            } catch (error) {
+                document.getElementById('registrationStatus').innerHTML = 
+                    `<p class="error">Error: ${error.reason || error.message}</p>`;
+            }
+        }
+
+        async function updateUsername() {
+            try {
+                const newUsername = document.getElementById('newUsername').value.trim();
+                if (!newUsername) {
+                    alert('Please enter a new username');
+                    return;
+                }
+
+                const tx = await registryContract.updateUsername(newUsername);
+                document.getElementById('registrationStatus').innerHTML = 
+                    '<p class="success">Updating username... Please wait.</p>';
+                
+                await tx.wait();
+                document.getElementById('registrationStatus').innerHTML = 
+                    '<p class="success">Username updated successfully!</p>';
+                
+                await checkUserRegistration();
+            } catch (error) {
+                document.getElementById('registrationStatus').innerHTML = 
+                    `<p class="error">Error: ${error.reason || error.message}</p>`;
+            }
+        }
+
+        function displayUserInfo(userDetails) {
+            document.getElementById('registrationForm').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('userUsername').textContent = userDetails.username;
+            document.getElementById('userRegDate').textContent = 
+                new Date(userDetails.registrationDate * 1000).toLocaleString();
+        }
 
         async function updateContractStatus() {
             try {
@@ -368,13 +481,12 @@
                     
                     provider = new ethers.providers.Web3Provider(window.ethereum);
                     signer = provider.getSigner();
-                    contract = new ethers.Contract(contractAddress, contractABI, signer);
-                    
                     userAddress = await signer.getAddress();
+                    
                     document.getElementById('connectionStatus').innerHTML = 
                         'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(38);
 
-                    // Initialize contract state
+                    await initializeContracts();
                     await updateContractStatus();
                     await updateUserRole();
 
