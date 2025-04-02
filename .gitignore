@@ -38,9 +38,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# End of https://www.toptal.com/developers/gitignore/api/nextjs
-
-### Project Specific ###
 # Docker
 .docker/
 docker-compose.override.yml
@@ -74,3 +71,5 @@ data/temp/
 .vscode/
 *.sublime-*
 *.swp
+
+# End of https://www.toptal.com/developers/gitignore/api/nextjs
