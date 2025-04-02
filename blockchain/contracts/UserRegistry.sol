@@ -1,27 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/**
- * @title UserRegistry
- * @dev Manages user registration and their associated wallets
- */
 contract UserRegistry {
     struct User {
         string username;
         bool isRegistered;
         uint256 registrationDate;
+        bool isGeneratedWallet;  // true si la cartera fue generada por el sistema
+        address linkedWallet;    // dirección de la cartera vinculada (si existe)
     }
 
-    // Mapping from wallet address to User struct
+    // Mappings principales
     mapping(address => User) public users;
-    // Mapping from username to wallet address
     mapping(string => address) public usernameToAddress;
-    // Array to keep track of all registered addresses
     address[] public registeredAddresses;
 
     // Events
-    event UserRegistered(address indexed userAddress, string username, uint256 timestamp);
+    event UserRegistered(address indexed userAddress, string username, uint256 timestamp, bool isGeneratedWallet);
     event UserUpdated(address indexed userAddress, string newUsername, uint256 timestamp);
+    event WalletGenerated(address indexed userAddress, string username);
+    event WalletLinked(address indexed userAddress, address indexed linkedWallet, string username);
 
     // Modifiers
     modifier onlyRegistered() {
@@ -35,23 +33,49 @@ contract UserRegistry {
     }
 
     /**
-     * @dev Register a new user
-     * @param username The username for the new user
+     * @dev Registrar un nuevo usuario con cartera existente (MetaMask)
      */
-    function registerUser(string memory username) public usernameAvailable(username) {
+    function registerWithExistingWallet(string memory username) public usernameAvailable(username) {
         require(!users[msg.sender].isRegistered, "Direccion ya registrada");
         require(bytes(username).length > 0, "El nombre de usuario no puede estar vacio");
 
-        users[msg.sender] = User({
+        _createUser(msg.sender, username, false, address(0));
+    }
+
+    /**
+     * @dev Registrar un nuevo usuario con cartera generada
+     * @param username Nombre de usuario
+     * @param generatedAddress Dirección de la cartera generada
+     */
+    function registerWithGeneratedWallet(string memory username, address generatedAddress) public usernameAvailable(username) {
+        require(generatedAddress != address(0), "Direccion invalida");
+        require(!users[generatedAddress].isRegistered, "Cartera ya registrada");
+        
+        _createUser(generatedAddress, username, true, msg.sender);
+        emit WalletGenerated(generatedAddress, username);
+    }
+
+    /**
+     * @dev Función interna para crear un usuario
+     */
+    function _createUser(
+        address userAddress,
+        string memory username,
+        bool isGenerated,
+        address linkedWallet
+    ) internal {
+        users[userAddress] = User({
             username: username,
             isRegistered: true,
-            registrationDate: block.timestamp
+            registrationDate: block.timestamp,
+            isGeneratedWallet: isGenerated,
+            linkedWallet: linkedWallet
         });
 
-        usernameToAddress[username] = msg.sender;
-        registeredAddresses.push(msg.sender);
+        usernameToAddress[username] = userAddress;
+        registeredAddresses.push(userAddress);
 
-        emit UserRegistered(msg.sender, username, block.timestamp);
+        emit UserRegistered(userAddress, username, block.timestamp, isGenerated);
     }
 
     /**
@@ -78,36 +102,28 @@ contract UserRegistry {
     }
 
     /**
-     * @dev Get user details by address
-     * @param userAddress The address to query
-     * @return username The username associated with the address
-     * @return registrationDate The timestamp when the user registered
+     * @dev Obtener detalles completos del usuario
      */
     function getUserDetails(address userAddress) public view returns (
         string memory username,
-        uint256 registrationDate
+        uint256 registrationDate,
+        bool isGeneratedWallet,
+        address linkedWallet
     ) {
         require(users[userAddress].isRegistered, "Usuario no encontrado");
         User memory user = users[userAddress];
-        return (user.username, user.registrationDate);
+        return (
+            user.username,
+            user.registrationDate,
+            user.isGeneratedWallet,
+            user.linkedWallet
+        );
     }
 
     /**
-     * @dev Get wallet address by username
-     * @param username The username to query
-     * @return The associated wallet address
+     * @dev Verificar si una dirección corresponde a una cartera generada
      */
-    function getAddressByUsername(string memory username) public view returns (address) {
-        address userAddress = usernameToAddress[username];
-        require(userAddress != address(0), "Usuario no encontrado");
-        return userAddress;
-    }
-
-    /**
-     * @dev Get total number of registered users
-     * @return The total number of registered users
-     */
-    function getTotalUsers() public view returns (uint256) {
-        return registeredAddresses.length;
+    function isGeneratedWallet(address userAddress) public view returns (bool) {
+        return users[userAddress].isGeneratedWallet;
     }
 }
