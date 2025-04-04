@@ -68,20 +68,20 @@ export default function BookService() {
 
   return (
     <div className="container mx-auto p-8">
-      <h1 className="text-3xl font-bold text-green-700 mb-8">Servicios Turísticos</h1>
+      <h1 className="text-3xl font-bold text-green-700 mb-8">Tourist Services</h1>
 
       <div className="mb-8">
-        <label className="block text-sm font-medium text-green-700 mb-2">Tipo de Servicio</label>
+        <label className="block text-sm font-medium text-green-700 mb-2">Service Type</label>
         <select
           value={selectedType}
           onChange={(e) => setSelectedType(e.target.value)}
           className="w-full md:w-64 p-2 border border-green-300 rounded-md focus:ring-green-500 focus:border-green-500"
         >
-          <option value="all">Todos los servicios</option>
-          <option value="gastronomico">Gastronómicos</option>
-          <option value="cultural">Culturales</option>
-          <option value="aventura">Aventura</option>
-          <option value="relax">Relax y Bienestar</option>
+          <option value="all">All services</option>
+          <option value="gastronomic">Gastronomic</option>
+          <option value="cultural">Cultural</option>
+          <option value="adventure">Adventure</option>
+          <option value="relaxation">Relaxation & Wellness</option>
         </select>
       </div>
 
@@ -93,8 +93,8 @@ export default function BookService() {
         </div>
       ) : (
         <div className="text-center py-12">
-          <h3 className="text-lg font-semibold text-gray-600">No se encontraron servicios</h3>
-          <p className="text-gray-500">Intenta con otros filtros</p>
+          <h3 className="text-lg font-semibold text-gray-600">No services found</h3>
+          <p className="text-gray-500">Try different filters</p>
         </div>
       )}
     </div>

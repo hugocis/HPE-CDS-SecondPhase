@@ -84,7 +84,7 @@ export default function ServiceDetails() {
               </p>
             </div>
             <button className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
-              Reservar ahora
+              Book now
             </button>
           </div>
 

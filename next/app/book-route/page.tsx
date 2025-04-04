@@ -1,90 +1,154 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { RouteCard } from './RouteCard';
+
+interface Route {
+  id: number;
+  name: string;
+  type: string;
+  details: {
+    lengthKm: number | null;
+    durationHr: number | null;
+    popularity: number;
+  };
+  stats: {
+    averageRating: number;
+    totalReviews: number;
+    recentUsage: number;
+  };
+}
 
 export default function BookRoute() {
-  const [routeType, setRouteType] = useState('all');
-  const [duration, setDuration] = useState('all');
+  const [routes, setRoutes] = useState<Route[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState('all');
+  const [maxDuration, setMaxDuration] = useState<string>('all');
 
-  return (
-    <div className="container mx-auto p-8">
-      <h1 className="text-3xl font-bold text-green-700 mb-6">Book a Tourist Route</h1>
+  useEffect(() => {
+    async function fetchRoutes() {
+      try {
+        setError(null);
+        const params = new URLSearchParams();
+        if (selectedType !== 'all') params.set('type', selectedType);
+        if (maxDuration !== 'all') params.set('maxDuration', maxDuration);
+        
+        const res = await fetch(`/api/routes?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to fetch routes');
+        const data = await res.json();
+        setRoutes(data);
+      } catch (error) {
+        console.error('Error:', error);
+        setError('Failed to load routes. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    }
 
-      <div className="bg-green-50 p-6 rounded-lg mb-8">
-        <h2 className="text-xl font-semibold text-green-800 mb-4">Route Preferences</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-green-700 mb-2">Route Type</label>
-            <select
-              value={routeType}
-              onChange={(e) => setRouteType(e.target.value)}
-              className="w-full p-2 border border-green-300 rounded-md focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="all">All Types</option>
-              <option value="cultural">Cultural Heritage</option>
-              <option value="nature">Nature & Wildlife</option>
-              <option value="adventure">Adventure</option>
-              <option value="urban">Urban Exploration</option>
-            </select>
+    fetchRoutes();
+  }, [selectedType, maxDuration]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-8">
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Sidebar skeleton */}
+          <div className="w-full md:w-64 shrink-0">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-32 bg-gray-200 rounded"></div>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-green-700 mb-2">Duration</label>
-            <select
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className="w-full p-2 border border-green-300 rounded-md focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="all">Any Duration</option>
-              <option value="short">Short (1-2 hours)</option>
-              <option value="medium">Medium (2-4 hours)</option>
-              <option value="long">Long (4+ hours)</option>
-            </select>
+          {/* Main content skeleton */}
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="bg-gray-200 h-48 rounded-lg"></div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
+    );
+  }
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {[
-          {
-            name: "Historic City Center Tour",
-            type: "Cultural Heritage",
-            duration: "2 hours",
-            distance: "3 km",
-            highlights: ["Ancient Architecture", "Local Markets", "Historical Sites"],
-          },
-          {
-            name: "Green Valley Nature Trail",
-            type: "Nature & Wildlife",
-            duration: "3 hours",
-            distance: "5 km",
-            highlights: ["Native Flora", "Bird Watching", "Scenic Views"],
-          },
-        ].map((route, index) => (
-          <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="h-48 bg-green-100 flex items-center justify-center">
-              <span className="text-green-600">Route Map Preview</span>
-            </div>
-            <div className="p-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">{route.name}</h3>
-              <div className="flex space-x-4 mb-4">
-                <span className="text-sm text-gray-600">🎯 {route.type}</span>
-                <span className="text-sm text-gray-600">⏱️ {route.duration}</span>
-                <span className="text-sm text-gray-600">📍 {route.distance}</span>
+  if (error) {
+    return (
+      <div className="container mx-auto p-8">
+        <div className="text-center text-red-600">
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-8">
+      <h1 className="text-3xl font-bold text-green-700 mb-8">Tourist Routes</h1>
+
+      <div className="flex flex-col md:flex-row gap-8">
+        {/* Sidebar con filtros */}
+        <div className="w-full md:w-64 shrink-0">
+          <div className="bg-white rounded-lg shadow-md p-6 sticky top-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">Filters</h2>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Route Type</label>
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="all">All Types</option>
+                  <option value="Cultural">Cultural</option>
+                  <option value="Aventura">Aventura</option>
+                  <option value="Gastronómica">Gastronómica</option>
+                  <option value="Histórica">Histórica</option>
+                  <option value="Ecológica">Ecológica</option>
+                </select>
               </div>
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Highlights:</h4>
-                <ul className="list-disc list-inside text-gray-600">
-                  {route.highlights.map((highlight, i) => (
-                    <li key={i}>{highlight}</li>
-                  ))}
-                </ul>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Max Duration</label>
+                <select
+                  value={maxDuration}
+                  onChange={(e) => setMaxDuration(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="all">Any Duration</option>
+                  <option value="2">Up to 2 hours</option>
+                  <option value="4">Up to 4 hours</option>
+                  <option value="6">Up to 6 hours</option>
+                  <option value="8">Up to 8 hours</option>
+                </select>
               </div>
-              <button className="w-full bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700 transition-colors">
-                Book This Route
-              </button>
+
+              <div className="pt-4 border-t">
+                <p className="text-sm text-gray-600 mb-2">
+                  Found {routes.length} routes
+                </p>
+              </div>
             </div>
           </div>
-        ))}
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1">
+          {routes.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {routes.map((route) => (
+                <RouteCard key={route.id} route={route} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white rounded-lg shadow-md">
+              <h3 className="text-lg font-semibold text-gray-600">No routes found</h3>
+              <p className="text-gray-500">Try different filters</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

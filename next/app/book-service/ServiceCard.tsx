@@ -34,7 +34,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
 
           <Link href={`/book-service/${service.id}`}>
             <button className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors">
-              Ver detalles
+              View details
             </button>
           </Link>
         </div>
