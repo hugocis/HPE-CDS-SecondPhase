@@ -7,6 +7,7 @@ export default function HotelDetails() {
   const params = useParams();
   const [hotel, setHotel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [averageRating, setAverageRating] = useState<number>(0);
 
   useEffect(() => {
     async function fetchHotelDetails() {
@@ -14,6 +15,22 @@ export default function HotelDetails() {
         const res = await fetch(`/api/hotels/${params.id}`);
         if (!res.ok) throw new Error('Failed to fetch hotel details');
         const data = await res.json();
+        
+        // Calcular la puntuación media
+        if (data.reviews && data.reviews.length > 0) {
+          const totalRating = data.reviews.reduce((acc: number, review: any) => acc + review.rating, 0);
+          const avgRating = totalRating / data.reviews.length;
+          setAverageRating(avgRating);
+          
+          // Ordenar las reseñas por puntuación (de mayor a menor) y fecha
+          data.reviews.sort((a: any, b: any) => {
+            if (b.rating !== a.rating) {
+              return b.rating - a.rating;
+            }
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+          });
+        }
+        
         setHotel(data);
       } catch (error) {
         console.error('Error:', error);
@@ -139,13 +156,29 @@ export default function HotelDetails() {
       {/* Reseñas */}
       {hotel.reviews && hotel.reviews.length > 0 && (
         <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Guest Reviews</h2>
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Guest Reviews</h2>
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center">
+                <span className="text-2xl text-yellow-400">{'★'.repeat(Math.round(averageRating))}</span>
+                <span className="text-2xl text-gray-300">{'★'.repeat(5 - Math.round(averageRating))}</span>
+              </div>
+              <span className="text-lg font-semibold text-gray-700">{averageRating.toFixed(1)}</span>
+              <span className="text-gray-500">({hotel.reviews.length} reviews)</span>
+            </div>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {hotel.reviews.map((review: any) => (
               <div key={review.id} className="bg-gray-50 p-4 rounded-md">
-                <div className="flex items-center mb-2">
-                  <span className="text-yellow-400">{'★'.repeat(review.rating)}</span>
-                  <span className="text-gray-300">{'★'.repeat(5 - review.rating)}</span>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center">
+                    <span className="text-yellow-400">{'★'.repeat(review.rating)}</span>
+                    <span className="text-gray-300">{'★'.repeat(5 - review.rating)}</span>
+                  </div>
+                  <span className="text-sm text-gray-500">
+                    {new Date(review.date).toLocaleDateString()}
+                  </span>
                 </div>
                 {review.comment && (
                   <p className="text-gray-600 italic">&quot;{review.comment}&quot;</p>
