@@ -1,10 +1,13 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+
 type HotelCardProps = {
   hotel: any;  // You can replace 'any' with a proper type if needed
 };
 
 export function HotelCard({ hotel }: HotelCardProps) {
+  const router = useRouter();
   const sustainability = hotel.sustainabilityData[0];
   
   return (
@@ -58,7 +61,7 @@ export function HotelCard({ hotel }: HotelCardProps) {
         )}
 
         <button 
-          onClick={() => alert('Booking functionality coming soon!')}
+          onClick={() => router.push(`/book-hotel/${hotel.id}`)}
           className="w-full mt-6 bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700 transition-colors"
         >
           Book Now
