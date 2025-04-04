@@ -102,11 +102,11 @@ export async function GET(request: Request) {
     // Ordenar los hoteles según los criterios aplicados
     const sortedHotels = [...formattedHotels].sort((a, b) => {
       if (minEcoScore !== undefined) {
-        // Si hay filtro de eco score, ordenar primero por eco score
-        return b.calculatedData.ecoScore - a.calculatedData.ecoScore;
+        // Si hay filtro de eco score, ordenar de menor a mayor
+        return a.calculatedData.ecoScore - b.calculatedData.ecoScore;
       } else {
-        // Si no hay filtro de eco score, ordenar por precio
-        return (a.calculatedData.pricePerNight - b.calculatedData.pricePerNight);
+        // Si no hay filtro de eco score, ordenar por precio de menor a mayor
+        return a.calculatedData.pricePerNight - b.calculatedData.pricePerNight;
       }
     });
 
