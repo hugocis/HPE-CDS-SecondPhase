@@ -33,7 +33,7 @@ export function HotelCard({ hotel }: HotelCardProps) {
             <div className="text-sm text-gray-600 space-y-1">
               <p>Energy Usage: {sustainability.energyConsumptionKwh} kWh</p>
               <p>Waste Generated: {sustainability.wasteGeneratedKg} kg</p>
-              <p>Recycling Rate: {sustainability.recyclingPercentage}%</p>
+              <p>Recycling Rate: {(sustainability.recyclingPercentage * 100).toFixed(1)}%</p>
             </div>
           </div>
         )}
