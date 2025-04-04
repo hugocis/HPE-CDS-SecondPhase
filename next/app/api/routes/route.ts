@@ -8,18 +8,8 @@ export async function GET(request: Request) {
     const routeClass = searchParams.get('routeClass');
     const maxDuration = searchParams.get('maxDuration') ? parseFloat(searchParams.get('maxDuration')!) : undefined;
 
-    // Primero obtenemos todas las rutas para poder detectar su clase
+    // First get all routes to determine their class
     const routes = await prisma.route.findMany({
-      where: {
-        AND: [
-          type && type !== 'all' ? {
-            routeType: {
-              equals: type
-            }
-          } : {},
-          maxDuration ? { durationHr: { lte: maxDuration * 10 } } : {}
-        ]
-      },
       include: {
         reviews: {
           orderBy: {
@@ -36,12 +26,12 @@ export async function GET(request: Request) {
     });
 
     const formattedRoutes = routes.map(route => {
-      // Calculamos el rating promedio
+      // Calculate average rating
       const averageRating = route.reviews.length > 0
         ? route.reviews.reduce((acc, curr) => acc + curr.rating, 0) / route.reviews.length
         : 0;
 
-      // Calculamos la popularidad
+      // Calculate popularity
       const basePopularity = route.popularity || 0;
       const usagePopularity = route.transportUsages.length > 0
         ? route.transportUsages.reduce((acc, curr) => acc + curr.userCount, 0) / route.transportUsages.length
@@ -52,18 +42,9 @@ export async function GET(request: Request) {
         (Math.min(usagePopularity / 100, 1) * 50)
       );
 
-      // Determinamos si es una ruta simple o compuesta por el patrón del nombre
+      // Determine if route is simple or composite by name pattern
       const nameParts = route.name.split(' - ');
       const isSimpleRoute = nameParts.length === 2 && !isNaN(Number(nameParts[1]));
-
-      // Solo incluimos la ruta si coincide con el filtro de clase seleccionado
-      const routeClass = searchParams.get('routeClass');
-      if (routeClass && routeClass !== 'all') {
-        const matchesClass = (routeClass === 'simple') === isSimpleRoute;
-        if (!matchesClass) {
-          return null;
-        }
-      }
 
       return {
         id: route.id,
@@ -81,11 +62,28 @@ export async function GET(request: Request) {
           recentUsage: route.transportUsages.length
         }
       };
-    }).filter(route => route !== null);
+    });
 
-    // Ordenar por popularidad
-    const sortedRoutes = [...formattedRoutes].sort((a, b) => 
-      (b!.details.popularity || 0) - (a!.details.popularity || 0)
+    // Apply filters
+    let filteredRoutes = formattedRoutes;
+
+    if (type && type !== 'all') {
+      filteredRoutes = filteredRoutes.filter(route => route.type === type);
+    }
+
+    if (routeClass && routeClass !== 'all') {
+      filteredRoutes = filteredRoutes.filter(route => route.routeClass === routeClass);
+    }
+
+    if (maxDuration) {
+      filteredRoutes = filteredRoutes.filter(route => 
+        route.details.durationHr !== null && route.details.durationHr <= maxDuration
+      );
+    }
+
+    // Sort by popularity
+    const sortedRoutes = [...filteredRoutes].sort((a, b) => 
+      (b.details.popularity || 0) - (a.details.popularity || 0)
     );
 
     return NextResponse.json(sortedRoutes);

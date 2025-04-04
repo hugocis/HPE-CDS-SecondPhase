@@ -29,6 +29,33 @@ export default function BookRoute() {
   const [selectedClass, setSelectedClass] = useState('all');
   const [maxDuration, setMaxDuration] = useState<string>('all');
 
+  // Reset other filters when selecting composite routes
+  useEffect(() => {
+    if (selectedClass === 'composite') {
+      setSelectedType('all');
+      setMaxDuration('all');
+    }
+  }, [selectedClass]);
+
+  // Fetch all available route types once on component mount
+  useEffect(() => {
+    async function fetchAllRouteTypes() {
+      try {
+        const res = await fetch('/api/routes');
+        if (!res.ok) throw new Error('Failed to fetch routes');
+        const data = await res.json();
+        const uniqueTypes = Array.from(new Set(data.map((route: Route) => route.type)))
+          .filter((type): type is string => type !== null && type !== undefined)
+          .sort();
+        setRouteTypes(uniqueTypes);
+      } catch (error) {
+        console.error('Error fetching route types:', error);
+      }
+    }
+    fetchAllRouteTypes();
+  }, []);
+
+  // Fetch filtered routes when filters change
   useEffect(() => {
     async function fetchRoutes() {
       try {
@@ -43,10 +70,6 @@ export default function BookRoute() {
         if (!res.ok) throw new Error('Failed to fetch routes');
         const data = await res.json();
         setRoutes(data);
-        
-        // Extraer tipos únicos de las rutas
-        const uniqueTypes = Array.from(new Set(data.map((route: Route) => route.type))).filter((type): type is string => type !== null && type !== undefined);
-        setRouteTypes(uniqueTypes);
       } catch (error) {
         console.error('Error:', error);
         setError('Failed to load routes. Please try again later.');
@@ -117,34 +140,38 @@ export default function BookRoute() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Route Type</label>
-                <select
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="all">All Types</option>
-                  {routeTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
+              {selectedClass !== 'composite' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Route Type</label>
+                    <select
+                      value={selectedType}
+                      onChange={(e) => setSelectedType(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                    >
+                      <option value="all">All Types</option>
+                      {routeTypes.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Max Duration</label>
-                <select
-                  value={maxDuration}
-                  onChange={(e) => setMaxDuration(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="all">Any Duration</option>
-                  <option value="2">Up to 2 hours</option>
-                  <option value="4">Up to 4 hours</option>
-                  <option value="6">Up to 6 hours</option>
-                  <option value="8">Up to 8 hours</option>
-                </select>
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Max Duration</label>
+                    <select
+                      value={maxDuration}
+                      onChange={(e) => setMaxDuration(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                    >
+                      <option value="all">Any Duration</option>
+                      <option value="2">Up to 2 hours</option>
+                      <option value="4">Up to 4 hours</option>
+                      <option value="6">Up to 6 hours</option>
+                      <option value="8">Up to 8 hours</option>
+                    </select>
+                  </div>
+                </>
+              )}
 
               <div className="pt-4 border-t">
                 <p className="text-sm text-gray-600 mb-2">

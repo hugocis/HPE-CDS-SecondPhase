@@ -41,9 +41,6 @@ export function RouteCard({ route }: RouteCardProps) {
             <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
               {route.type}
             </span>
-            <span className={`px-3 py-1 ${route.routeClass === 'simple' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'} rounded-full text-sm`}>
-              {route.routeClass === 'simple' ? 'Simple' : 'Compuesta'}
-            </span>
           </div>
         </div>
         
