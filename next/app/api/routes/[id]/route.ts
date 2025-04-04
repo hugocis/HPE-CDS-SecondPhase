@@ -75,13 +75,18 @@ export async function GET(
       averageTravelTime: Math.round(stats.avgTravelTime / stats.count)
     }));
 
+    // Determine if route is simple or composite based on name pattern
+    const nameParts = route.name.split(' - ');
+    const isSimpleRoute = nameParts.length === 2 && !isNaN(Number(nameParts[1]));
+
     const formattedRoute = {
       id: route.id,
       name: route.name,
       type: route.routeType || 'General',
+      routeClass: isSimpleRoute ? 'simple' : 'composite',
       details: {
-        lengthKm: route.lengthKm,
-        durationHr: route.durationHr,
+        lengthKm: route.lengthKm ? route.lengthKm / 10 : null,
+        durationHr: route.durationHr ? route.durationHr / 10 : null,
         popularity: popularityScore
       },
       stats: {

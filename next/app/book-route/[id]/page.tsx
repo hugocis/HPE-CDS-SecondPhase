@@ -8,6 +8,7 @@ interface Route {
   id: number;
   name: string;
   type: string;
+  routeClass: 'simple' | 'composite';
   details: {
     lengthKm: number | null;
     durationHr: number | null;
@@ -96,9 +97,14 @@ export default function RouteDetails() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-green-700">{route.name}</h1>
-            <span className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-              {route.type}
-            </span>
+            <div className="flex gap-2 mt-2">
+              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                {route.type}
+              </span>
+              <span className={`px-3 py-1 ${route.routeClass === 'simple' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'} rounded-full text-sm`}>
+                {route.routeClass === 'simple' ? 'Tourist Route' : 'Travel Route'}
+              </span>
+            </div>
           </div>
           <div className="text-right">
             <div className="text-sm font-medium text-gray-600">Popularity</div>

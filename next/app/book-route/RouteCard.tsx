@@ -8,6 +8,7 @@ interface RouteCardProps {
     id: number;
     name: string;
     type: string;
+    routeClass: 'simple' | 'composite';
     details: {
       lengthKm: number | null;
       durationHr: number | null;
@@ -36,13 +37,18 @@ export function RouteCard({ route }: RouteCardProps) {
       <div className="p-6">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xl font-semibold text-gray-800">{route.name}</h3>
-          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-            {route.type}
-          </span>
+          <div className="flex gap-2">
+            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+              {route.type}
+            </span>
+            <span className={`px-3 py-1 ${route.routeClass === 'simple' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'} rounded-full text-sm`}>
+              {route.routeClass === 'simple' ? 'Simple' : 'Compuesta'}
+            </span>
+          </div>
         </div>
         
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-sm text-gray-600">
+          <div className="text-sm text-gray-600">
             <div className="flex space-x-4">
               {route.details.lengthKm && (
                 <span>📍 {route.details.lengthKm} km</span>
@@ -51,7 +57,7 @@ export function RouteCard({ route }: RouteCardProps) {
                 <span>⏱️ {formatDuration(route.details.durationHr)}</span>
               )}
             </div>
-            <span className="flex items-center">
+            <span className="flex items-center mt-2">
               👥 {route.stats.recentUsage} recent visits
             </span>
           </div>

@@ -7,6 +7,7 @@ interface Route {
   id: number;
   name: string;
   type: string;
+  routeClass: 'simple' | 'composite';
   details: {
     lengthKm: number | null;
     durationHr: number | null;
@@ -21,23 +22,31 @@ interface Route {
 
 export default function BookRoute() {
   const [routes, setRoutes] = useState<Route[]>([]);
+  const [routeTypes, setRouteTypes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState('all');
+  const [selectedClass, setSelectedClass] = useState('all');
   const [maxDuration, setMaxDuration] = useState<string>('all');
 
   useEffect(() => {
     async function fetchRoutes() {
       try {
         setError(null);
+        setLoading(true);
         const params = new URLSearchParams();
         if (selectedType !== 'all') params.set('type', selectedType);
+        if (selectedClass !== 'all') params.set('routeClass', selectedClass);
         if (maxDuration !== 'all') params.set('maxDuration', maxDuration);
         
         const res = await fetch(`/api/routes?${params.toString()}`);
         if (!res.ok) throw new Error('Failed to fetch routes');
         const data = await res.json();
         setRoutes(data);
+        
+        // Extraer tipos únicos de las rutas
+        const uniqueTypes = Array.from(new Set(data.map((route: Route) => route.type))).filter((type): type is string => type !== null && type !== undefined);
+        setRouteTypes(uniqueTypes);
       } catch (error) {
         console.error('Error:', error);
         setError('Failed to load routes. Please try again later.');
@@ -47,7 +56,7 @@ export default function BookRoute() {
     }
 
     fetchRoutes();
-  }, [selectedType, maxDuration]);
+  }, [selectedType, selectedClass, maxDuration]);
 
   if (loading) {
     return (
@@ -60,6 +69,7 @@ export default function BookRoute() {
               <div className="h-32 bg-gray-200 rounded"></div>
             </div>
           </div>
+
           {/* Main content skeleton */}
           <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6">
             {[...Array(4)].map((_, i) => (
@@ -85,7 +95,7 @@ export default function BookRoute() {
 
   return (
     <div className="container mx-auto p-8">
-      <h1 className="text-3xl font-bold text-green-700 mb-8">Tourist Routes</h1>
+      <h1 className="text-3xl font-bold text-green-700 mb-8">Routes</h1>
 
       <div className="flex flex-col md:flex-row gap-8">
         {/* Sidebar con filtros */}
@@ -95,6 +105,19 @@ export default function BookRoute() {
             
             <div className="space-y-6">
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Route Category</label>
+                <select
+                  value={selectedClass}
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="all">All Routes</option>
+                  <option value="simple">Tourist Routes</option>
+                  <option value="composite">Travel Routes</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Route Type</label>
                 <select
                   value={selectedType}
@@ -102,11 +125,9 @@ export default function BookRoute() {
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                 >
                   <option value="all">All Types</option>
-                  <option value="Cultural">Cultural</option>
-                  <option value="Aventura">Aventura</option>
-                  <option value="Gastronómica">Gastronómica</option>
-                  <option value="Histórica">Histórica</option>
-                  <option value="Ecológica">Ecológica</option>
+                  {routeTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
                 </select>
               </div>
 
