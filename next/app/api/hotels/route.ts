@@ -70,28 +70,44 @@ export async function GET(request: Request) {
       
       let ecoScore = 0;
       if (sustainability) {
-        // Calculate eco score based on multiple factors
-        const recyclingScore = sustainability.recyclingPercentage * 0.4; // 40% weight
-        const energyScore = Math.min(100 - (sustainability.energyConsumptionKwh / 1000) * 10, 40); // 40% weight
-        const wasteScore = Math.min(100 - (sustainability.wasteGeneratedKg / 100) * 20, 20); // 20% weight
+        const recyclingScore = (sustainability.recyclingPercentage / 100) * 40;
+        const energyScore = Math.min(100 - (sustainability.energyConsumptionKwh / 1000) * 10, 40);
+        const wasteScore = Math.min(100 - (sustainability.wasteGeneratedKg / 100) * 20, 20);
         ecoScore = Math.round(recyclingScore + energyScore + wasteScore);
       }
+
+      // Asumimos 100 habitaciones por hotel como ejemplo
+      const TOTAL_ROOMS = 100;
+      const occupancyRate = occupancy ? occupancy.occupancyRate : 0; // Ya viene como porcentaje
+      const availableRooms = Math.round(TOTAL_ROOMS * (100 - occupancyRate) / 100);
 
       return {
         ...hotel,
         calculatedData: {
           ecoScore,
           pricePerNight: occupancy ? occupancy.averagePricePerNight / 100 : 0,
-          availableRooms: occupancy ? Math.round((1 - occupancy.occupancyRate) * 100) : 0,
-        }
+          availableRooms,
+          totalRooms: TOTAL_ROOMS,
+          occupancyRate: occupancyRate
+        },
+        sustainabilityData: hotel.sustainabilityData.map(data => ({
+          ...data,
+          recyclingPercentage: data.recyclingPercentage / 100,
+          energyConsumptionKwh: data.energyConsumptionKwh,
+          wasteGeneratedKg: data.wasteGeneratedKg,
+        }))
       };
     });
 
-    // Ordenar los hoteles por precio de manera ascendente
+    // Ordenar los hoteles según los criterios aplicados
     const sortedHotels = [...formattedHotels].sort((a, b) => {
-      const priceA = a.occupancyData[0]?.averagePricePerNight || 0;
-      const priceB = b.occupancyData[0]?.averagePricePerNight || 0;
-      return priceA - priceB;
+      if (minEcoScore !== undefined) {
+        // Si hay filtro de eco score, ordenar primero por eco score
+        return b.calculatedData.ecoScore - a.calculatedData.ecoScore;
+      } else {
+        // Si no hay filtro de eco score, ordenar por precio
+        return (a.calculatedData.pricePerNight - b.calculatedData.pricePerNight);
+      }
     });
 
     // Aplicar filtros adicionales después del cálculo del eco score si es necesario

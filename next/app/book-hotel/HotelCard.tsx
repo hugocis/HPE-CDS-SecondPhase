@@ -22,8 +22,8 @@ export function HotelCard({ hotel }: HotelCardProps) {
             <span className="font-semibold">Price:</span> €{hotel.calculatedData.pricePerNight.toFixed(2)}/night
           </p>
           <p className="text-gray-600">
-            <span className="font-semibold">Available Rooms:</span>{' '}
-            {hotel.calculatedData.availableRooms} rooms
+            <span className="font-semibold">Rooms:</span>{' '}
+            {hotel.calculatedData.availableRooms} available of {hotel.calculatedData.totalRooms} total
           </p>
         </div>
 
