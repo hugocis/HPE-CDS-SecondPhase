@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { BuildingOfficeIcon, MapIcon, TruckIcon } from '@heroicons/react/24/outline';
+import { BuildingOfficeIcon, MapIcon, TruckIcon, BuildingStorefrontIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import "./globals.css";
 
@@ -45,6 +45,10 @@ export default function RootLayout({
               <a href="/book-route" className="text-white hover:text-green-200 flex items-center gap-2 inline-flex transition-colors">
                 <MapIcon className="h-5 w-5" />
                 <span>Book Route</span>
+              </a>
+              <a href="/book-service" className="text-white hover:text-green-200 flex items-center gap-2 inline-flex transition-colors">
+                <BuildingStorefrontIcon className="h-5 w-5" />
+                <span>Book Service</span>
               </a>
               <a href="/book-vehicle" className="text-white hover:text-green-200 flex items-center gap-2 inline-flex transition-colors">
                 <TruckIcon className="h-5 w-5" />
