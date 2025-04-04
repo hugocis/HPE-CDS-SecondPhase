@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "GreenLake City Tourist Department",
   description: "Welcome to GreenLake City - Your eco-friendly tourist destination",
   icons: {
-    icon: '/Logo_Greenlake.png',
+    icon: '/Logo_Greenlake.png'
   },
 };
 
@@ -21,6 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/Logo_Greenlake.png" />
+      </head>
       <body className={inter.className} suppressHydrationWarning>
         <nav className="bg-green-600 p-4 shadow-lg">
           <div className="container mx-auto flex justify-between items-center">
