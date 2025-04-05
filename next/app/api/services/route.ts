@@ -5,20 +5,26 @@ import prisma from '@/lib/prisma';
 function determineServiceType(serviceName: string): string {
   const nameLower = serviceName.toLowerCase();
   
-  if (nameLower.includes('atracción') || nameLower.includes('atraccion')) {
-    return 'Attraction';
-  }
   if (nameLower.includes('museo')) {
-    return 'Museum';
+    return 'Cultural';
   }
-  if (nameLower.includes('parque')) {
-    return 'Park';
+  if (nameLower.includes('teatro') || nameLower.includes('concierto') || nameLower.includes('espectáculo')) {
+    return 'Entertainment';
   }
-  if (nameLower.includes('teatro')) {
-    return 'Theater';
+  if (nameLower.includes('parque') || nameLower.includes('jardín') || nameLower.includes('jardin')) {
+    return 'Nature';
   }
-  if (nameLower.includes('restaurante')) {
-    return 'Restaurant';
+  if (nameLower.includes('restaurante') || nameLower.includes('gastro') || nameLower.includes('cocina')) {
+    return 'Food';
+  }
+  if (nameLower.includes('spa') || nameLower.includes('yoga') || nameLower.includes('masaje')) {
+    return 'Wellness';
+  }
+  if (nameLower.includes('taller') || nameLower.includes('clase') || nameLower.includes('curso')) {
+    return 'Workshop';
+  }
+  if (nameLower.includes('aventura') || nameLower.includes('deporte') || nameLower.includes('excursión')) {
+    return 'Adventure';
   }
   
   return 'Others';

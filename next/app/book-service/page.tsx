@@ -43,12 +43,14 @@ export default function BookService() {
     : services.filter(service => service.type === selectedType);
 
   const categoryIcons: { [key: string]: string } = {
-    'Cultural': '🎭',
-    'Adventure': '🏃',
-    'Nature': '🌿',
-    'Food': '🍽️',
-    'Wellness': '💆',
-    'Workshop': '🛠️'
+    'Cultural': '🏛️',      // Museo/patrimonio cultural
+    'Entertainment': '🎭', // Teatro/espectáculos
+    'Nature': '🌳',       // Parques y jardines
+    'Food': '🍽️',        // Restaurantes y gastronomía
+    'Wellness': '💆',     // Spa y bienestar
+    'Workshop': '🎨',     // Talleres y cursos
+    'Adventure': '🏃',    // Deportes y aventura
+    'Others': '🎪'        // Otros servicios
   };
 
   if (loading) {
