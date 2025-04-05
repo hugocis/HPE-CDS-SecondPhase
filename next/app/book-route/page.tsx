@@ -26,7 +26,7 @@ export default function BookRoute() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState('all');
-  const [selectedClass, setSelectedClass] = useState('all');
+  const [selectedClass, setSelectedClass] = useState('simple');
   const [maxDuration, setMaxDuration] = useState<string>('all');
 
   // Reset other filters when selecting composite routes
@@ -63,7 +63,7 @@ export default function BookRoute() {
         setLoading(true);
         const params = new URLSearchParams();
         if (selectedType !== 'all') params.set('type', selectedType);
-        if (selectedClass !== 'all') params.set('routeClass', selectedClass);
+        params.set('routeClass', selectedClass);
         if (maxDuration !== 'all') params.set('maxDuration', maxDuration);
         
         const res = await fetch(`/api/routes?${params.toString()}`);
@@ -124,30 +124,43 @@ export default function BookRoute() {
         {/* Sidebar con filtros */}
         <div className="w-full md:w-64 shrink-0">
           <div className="bg-white rounded-lg shadow-md p-6 sticky top-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Filters</h2>
+            <h2 className="text-xl font-semibold text-green-800 mb-6">Filters</h2>
             
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Route Category</label>
-                <select
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="all">All Routes</option>
-                  <option value="simple">Tourist Routes</option>
-                  <option value="composite">Travel Routes</option>
-                </select>
+                <label className="block text-sm font-medium text-green-700 mb-3">Route Category</label>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setSelectedClass('simple')}
+                    className={`w-full text-left px-4 py-2 rounded-md transition-colors ${
+                      selectedClass === 'simple'
+                        ? 'bg-green-100 text-green-900 font-medium'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    Tourist Routes
+                  </button>
+                  <button
+                    onClick={() => setSelectedClass('composite')}
+                    className={`w-full text-left px-4 py-2 rounded-md transition-colors ${
+                      selectedClass === 'composite'
+                        ? 'bg-green-100 text-green-900 font-medium'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    Travel Routes
+                  </button>
+                </div>
               </div>
 
               {selectedClass !== 'composite' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Route Type</label>
+                    <label className="block text-sm font-medium text-green-700 mb-2">Route Type</label>
                     <select
                       value={selectedType}
                       onChange={(e) => setSelectedType(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                      className="w-full p-2 border border-green-300 rounded-md focus:ring-green-500 focus:border-green-500"
                     >
                       <option value="all">All Types</option>
                       {routeTypes.map(type => (
@@ -157,11 +170,11 @@ export default function BookRoute() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Max Duration</label>
+                    <label className="block text-sm font-medium text-green-700 mb-2">Max Duration</label>
                     <select
                       value={maxDuration}
                       onChange={(e) => setMaxDuration(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                      className="w-full p-2 border border-green-300 rounded-md focus:ring-green-500 focus:border-green-500"
                     >
                       <option value="all">Any Duration</option>
                       <option value="2">Up to 2 hours</option>
