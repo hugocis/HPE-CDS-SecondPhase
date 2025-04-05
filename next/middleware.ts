@@ -3,7 +3,13 @@ import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
-    // Add custom middleware logic here if needed
+    // Redirigir a /auth/signin con el callbackUrl
+    const isAuthenticated = !!req.nextauth.token;
+    if (!isAuthenticated) {
+      const signInUrl = new URL('/auth/signin', req.url);
+      signInUrl.searchParams.set('callbackUrl', req.url);
+      return NextResponse.redirect(signInUrl);
+    }
     return NextResponse.next();
   },
   {
@@ -20,5 +26,7 @@ export const config = {
     "/book-route/:path*",
     "/book-service/:path*",
     "/book-vehicle/:path*",
+    "/orders/:path*",
+    "/checkout/:path*",
   ],
 };
