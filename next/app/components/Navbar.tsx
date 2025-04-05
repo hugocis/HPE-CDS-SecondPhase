@@ -38,6 +38,13 @@ export default function Navbar() {
     router.push('/');
   };
 
+  const navigationItems = [
+    { name: 'Hotels', path: '/book-hotel' },
+    { name: 'Routes', path: '/book-route' },
+    { name: 'Services', path: '/book-service' },
+    { name: 'Vehicles', path: '/book-vehicle' }
+  ];
+
   return (
     <>
       <nav className={`fixed w-full top-0 z-50 transition-all duration-300 ${
@@ -60,22 +67,19 @@ export default function Navbar() {
               {/* Menú de navegación - Desktop */}
               {status === 'authenticated' && (
                 <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-                  {['Hotels', 'Routes', 'Services', 'Vehicles'].map((item) => {
-                    const path = `/book-${item.toLowerCase()}`;
-                    return (
-                      <Link
-                        key={item}
-                        href={path}
-                        className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 ${
-                          isActivePath(path)
-                            ? 'border-green-500 text-green-600'
-                            : 'border-transparent text-gray-700 hover:text-green-600 hover:border-green-300'
-                        }`}
-                      >
-                        {item}
-                      </Link>
-                    );
-                  })}
+                  {navigationItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.path}
+                      className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 ${
+                        isActivePath(item.path)
+                          ? 'border-green-500 text-green-600'
+                          : 'border-transparent text-gray-700 hover:text-green-600 hover:border-green-300'
+                      }`}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
                 </div>
               )}
             </div>
@@ -179,22 +183,19 @@ export default function Navbar() {
           <div className="px-2 pt-2 pb-3 space-y-1 bg-white shadow-lg">
             {status === 'authenticated' ? (
               <>
-                {['Hotels', 'Routes', 'Services', 'Vehicles'].map((item) => {
-                  const path = `/book-${item.toLowerCase()}`;
-                  return (
-                    <Link
-                      key={item}
-                      href={path}
-                      className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
-                        isActivePath(path)
-                          ? 'bg-green-50 text-green-600'
-                          : 'text-gray-700 hover:bg-green-50 hover:text-green-600'
-                      }`}
-                    >
-                      {item}
-                    </Link>
-                  );
-                })}
+                {navigationItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.path}
+                    className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
+                      isActivePath(item.path)
+                        ? 'bg-green-50 text-green-600'
+                        : 'text-gray-700 hover:bg-green-50 hover:text-green-600'
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
                 <Link
                   href="/orders"
                   className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${

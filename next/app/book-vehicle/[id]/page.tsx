@@ -151,7 +151,7 @@ export default function VehicleDetails() {
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Daily Rental Price:</span>
-                    <span className="font-semibold">€{vehicle.rentalPrice.toFixed(2)}</span>
+                    <span className="font-semibold">€{(vehicle.rentalPrice || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Availability:</span>

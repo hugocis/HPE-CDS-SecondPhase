@@ -8,64 +8,97 @@ async function checkHotelAvailability(hotelId: number, startDate: Date, endDate:
   const hotel = await prisma.hotel.findUnique({
     where: { id: hotelId },
     include: {
-      occupancyData: {
+      bookings: {
         where: {
-          date: {
-            gte: startDate,
-            lte: endDate
-          }
+          OR: [
+            {
+              AND: [
+                { startDate: { lte: endDate } },
+                { endDate: { gte: startDate } }
+              ]
+            }
+          ]
         }
       }
     }
   });
 
-  if (!hotel) {
-    throw new Error("Hotel not found");
-  }
+  if (!hotel) return false;
+  
+  // Verificar capacidad del hotel
+  if (guests > (hotel.capacity || 0)) return false;
 
-  // Check if there's any day where occupancy would exceed capacity
-  for (const occupancy of hotel.occupancyData) {
-    const availableRooms = Math.round(100 * (100 - occupancy.occupancyRate) / 100);
-    if (availableRooms < Math.ceil(guests / 2)) { // Assuming 2 guests per room
-      return false;
-    }
-  }
-
-  return true;
+  // Verificar si hay suficientes habitaciones disponibles para las fechas seleccionadas
+  const bookedRooms = hotel.bookings.reduce((sum, booking) => sum + (booking.quantity || 0), 0);
+  const availableRooms = (hotel.capacity || 0) - bookedRooms;
+  
+  return availableRooms >= guests;
 }
 
 async function checkVehicleAvailability(vehicleId: number, startDate: Date, endDate: Date) {
-  const existingBookings = await prisma.cartItem.count({
-    where: {
-      itemType: 'VEHICLE',
-      itemId: vehicleId,
-      startDate: {
-        lte: endDate
-      },
-      endDate: {
-        gte: startDate
+  const vehicle = await prisma.vehicle.findUnique({
+    where: { id: vehicleId },
+    include: {
+      bookings: {
+        where: {
+          OR: [
+            {
+              AND: [
+                { startDate: { lte: endDate } },
+                { endDate: { gte: startDate } }
+              ]
+            }
+          ]
+        }
       }
     }
   });
 
-  // También verificar en las órdenes existentes
-  const existingOrders = await prisma.order.count({
-    where: {
-      orderType: 'VEHICLE',
-      itemId: vehicleId,
-      startDate: {
-        lte: endDate
-      },
-      endDate: {
-        gte: startDate
-      },
-      status: {
-        not: 'CANCELLED'
+  if (!vehicle) return false;
+  if (!vehicle.availability) return false;
+
+  // Verificar si el vehículo ya está reservado en esas fechas
+  return vehicle.bookings.length === 0;
+}
+
+async function checkServiceAvailability(serviceId: number, startDate: Date) {
+  const service = await prisma.service.findUnique({
+    where: { id: serviceId },
+    include: {
+      bookings: {
+        where: {
+          startDate: startDate
+        }
       }
     }
   });
 
-  return (existingBookings + existingOrders) === 0;
+  if (!service) return false;
+  if (!service.availability) return false;
+
+  // Verificar capacidad disponible para el día
+  const bookedCapacity = service.bookings.reduce((sum, booking) => sum + (booking.quantity || 0), 0);
+  return bookedCapacity < (service.maxDailyBookings || 0);
+}
+
+async function checkRouteAvailability(routeId: number, startDate: Date, participants: number) {
+  const route = await prisma.route.findUnique({
+    where: { id: routeId },
+    include: {
+      bookings: {
+        where: {
+          startDate: startDate
+        }
+      }
+    }
+  });
+
+  if (!route) return false;
+
+  // Verificar capacidad disponible para el día
+  const maxParticipants = route.maxParticipants || 20; // valor por defecto de 20 si no está especificado
+  const bookedParticipants = route.bookings.reduce((sum, booking) => sum + (booking.quantity || 0), 0);
+  return (bookedParticipants + participants) <= maxParticipants;
 }
 
 // Get cart contents
