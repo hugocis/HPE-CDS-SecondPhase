@@ -58,26 +58,7 @@ model User {
   cart          Cart?
 }
 
-// Order and Cart models
-model Order {
-  id            Int      @id @default(autoincrement())
-  userId        Int
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  totalAmount   Float
-  discount      Float    @default(0)
-  status        String   @default("PENDING")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  paymentMethod String?
-  orderType     String
-  itemId        Int
-  quantity      Int      @default(1)
-  bookingDate   DateTime @default(now())
-  startDate     DateTime?
-  endDate       DateTime?
-  additionalInfo Json?
-}
-
+// Cart and Order models
 model Cart {
   id        Int        @id @default(autoincrement())
   userId    Int        @unique
@@ -91,7 +72,7 @@ model CartItem {
   id            Int      @id @default(autoincrement())
   cartId        Int
   cart          Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  itemType      String
+  itemType      String   // HOTEL, ROUTE, SERVICE, VEHICLE
   itemId        Int
   quantity      Int
   price         Float
@@ -101,7 +82,25 @@ model CartItem {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  @@unique([cartId, itemType, itemId])
+  @@index([cartId, itemType, itemId])
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalAmount   Float
+  discount      Float       @default(0)
+  status        String      @default("COMPLETED")
+  orderType     String      // HOTEL, ROUTE, SERVICE, VEHICLE
+  itemId        Int
+  quantity      Int         @default(1)
+  startDate     DateTime?
+  endDate       DateTime?
+  additionalInfo Json?
+  paymentMethod String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 // Model for tourist routes

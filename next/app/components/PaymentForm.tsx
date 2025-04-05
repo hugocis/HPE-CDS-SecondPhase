@@ -43,8 +43,8 @@ export default function PaymentForm({
         return;
       }
 
-      // En el futuro, aquí se integrará con la blockchain para usar EcoTokens
-      const discount = useEcoTokens ? totalAmount * 0.1 : 0; // 10% de descuento con EcoTokens
+      // Calcular el descuento con EcoTokens (10% del total)
+      const discount = useEcoTokens ? totalAmount * 0.1 : 0;
 
       const response = await fetch('/api/orders', {
         method: 'POST',
@@ -56,9 +56,9 @@ export default function PaymentForm({
           discount,
           orderType,
           itemId,
+          quantity,
           startDate,
           endDate,
-          quantity,
           additionalInfo,
           paymentMethod,
         }),
@@ -69,7 +69,6 @@ export default function PaymentForm({
       }
 
       onSuccess?.();
-      router.push('/orders');
     } catch (error) {
       onError?.(error instanceof Error ? error.message : 'Payment failed');
     } finally {
@@ -123,17 +122,17 @@ export default function PaymentForm({
         <div className="bg-gray-50 p-4 rounded-md">
           <div className="flex justify-between text-sm">
             <span>Subtotal</span>
-            <span>${totalAmount.toFixed(2)}</span>
+            <span>€{totalAmount.toFixed(2)}</span>
           </div>
           {useEcoTokens && (
             <div className="flex justify-between text-sm text-green-600 mt-2">
               <span>EcoTokens Discount (10%)</span>
-              <span>-${(totalAmount * 0.1).toFixed(2)}</span>
+              <span>-€{(totalAmount * 0.1).toFixed(2)}</span>
             </div>
           )}
           <div className="flex justify-between font-semibold mt-2 pt-2 border-t">
             <span>Total</span>
-            <span>${(totalAmount - (useEcoTokens ? totalAmount * 0.1 : 0)).toFixed(2)}</span>
+            <span>€{(totalAmount - (useEcoTokens ? totalAmount * 0.1 : 0)).toFixed(2)}</span>
           </div>
         </div>
       </div>

@@ -3,104 +3,6 @@ import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "../auth/[...nextauth]/route";
 
-// Helper functions for availability checks
-async function checkHotelAvailability(hotelId: number, startDate: Date, endDate: Date, guests: number) {
-  const hotel = await prisma.hotel.findUnique({
-    where: { id: hotelId },
-    include: {
-      bookings: {
-        where: {
-          OR: [
-            {
-              AND: [
-                { startDate: { lte: endDate } },
-                { endDate: { gte: startDate } }
-              ]
-            }
-          ]
-        }
-      }
-    }
-  });
-
-  if (!hotel) return false;
-  
-  // Verificar capacidad del hotel
-  if (guests > (hotel.capacity || 0)) return false;
-
-  // Verificar si hay suficientes habitaciones disponibles para las fechas seleccionadas
-  const bookedRooms = hotel.bookings.reduce((sum, booking) => sum + (booking.quantity || 0), 0);
-  const availableRooms = (hotel.capacity || 0) - bookedRooms;
-  
-  return availableRooms >= guests;
-}
-
-async function checkVehicleAvailability(vehicleId: number, startDate: Date, endDate: Date) {
-  const vehicle = await prisma.vehicle.findUnique({
-    where: { id: vehicleId },
-    include: {
-      bookings: {
-        where: {
-          OR: [
-            {
-              AND: [
-                { startDate: { lte: endDate } },
-                { endDate: { gte: startDate } }
-              ]
-            }
-          ]
-        }
-      }
-    }
-  });
-
-  if (!vehicle) return false;
-  if (!vehicle.availability) return false;
-
-  // Verificar si el vehículo ya está reservado en esas fechas
-  return vehicle.bookings.length === 0;
-}
-
-async function checkServiceAvailability(serviceId: number, startDate: Date) {
-  const service = await prisma.service.findUnique({
-    where: { id: serviceId },
-    include: {
-      bookings: {
-        where: {
-          startDate: startDate
-        }
-      }
-    }
-  });
-
-  if (!service) return false;
-  if (!service.availability) return false;
-
-  // Verificar capacidad disponible para el día
-  const bookedCapacity = service.bookings.reduce((sum, booking) => sum + (booking.quantity || 0), 0);
-  return bookedCapacity < (service.maxDailyBookings || 0);
-}
-
-async function checkRouteAvailability(routeId: number, startDate: Date, participants: number) {
-  const route = await prisma.route.findUnique({
-    where: { id: routeId },
-    include: {
-      bookings: {
-        where: {
-          startDate: startDate
-        }
-      }
-    }
-  });
-
-  if (!route) return false;
-
-  // Verificar capacidad disponible para el día
-  const maxParticipants = route.maxParticipants || 20; // valor por defecto de 20 si no está especificado
-  const bookedParticipants = route.bookings.reduce((sum, booking) => sum + (booking.quantity || 0), 0);
-  return (bookedParticipants + participants) <= maxParticipants;
-}
-
 // Get cart contents
 export async function GET(request: NextRequest) {
   try {
@@ -123,14 +25,17 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    if (!user) {
-      return new NextResponse("User not found", { status: 404 });
+    if (!user?.cart) {
+      return NextResponse.json([]);
     }
 
-    return NextResponse.json(user.cart);
+    return NextResponse.json(user.cart.items);
   } catch (error) {
     console.error("[CART_GET]", error);
-    return new NextResponse("Internal error", { status: 500 });
+    return new NextResponse(
+      JSON.stringify({ error: "Internal server error", code: "INTERNAL_ERROR" }), 
+      { status: 500 }
+    );
   }
 }
 
@@ -140,8 +45,204 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return new NextResponse(
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_ERROR" }), 
+        { status: 401 }
+      );
     }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        email: session.user.email,
+      },
+      include: {
+        cart: {
+          include: {
+            items: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return new NextResponse(
+        JSON.stringify({ error: "User not found", code: "USER_ERROR" }), 
+        { status: 404 }
+      );
+    }
+
+    const body = await request.json();
+    const { itemType, itemId, quantity, price, startDate, endDate, additionalInfo } = body;
+
+    // Validate required fields
+    if (!itemType || !itemId || !quantity || !price || !startDate) {
+      return new NextResponse(
+        JSON.stringify({ error: "Missing required fields", code: "VALIDATION_ERROR" }), 
+        { status: 400 }
+      );
+    }
+
+    // Validate dates
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : new Date(startDate);
+    
+    if (isNaN(start.getTime())) {
+      return new NextResponse(
+        JSON.stringify({ error: "Invalid start date", code: "VALIDATION_ERROR" }), 
+        { status: 400 }
+      );
+    }
+
+    if (endDate && isNaN(end.getTime())) {
+      return new NextResponse(
+        JSON.stringify({ error: "Invalid end date", code: "VALIDATION_ERROR" }), 
+        { status: 400 }
+      );
+    }
+
+    if (end < start) {
+      return new NextResponse(
+        JSON.stringify({ error: "End date cannot be before start date", code: "VALIDATION_ERROR" }), 
+        { status: 400 }
+      );
+    }
+
+    try {
+      // Create or get cart
+      let cart = user.cart;
+      if (!cart) {
+        cart = await prisma.cart.create({
+          data: {
+            userId: user.id,
+          },
+          include: {
+            items: true
+          }
+        });
+      }
+      
+      // Safety check to ensure cart exists
+      if (!cart) {
+        return new NextResponse(
+          JSON.stringify({ 
+            error: "Failed to create or retrieve cart", 
+            code: "CART_ERROR" 
+          }), 
+          { status: 500 }
+        );
+      }
+
+      // Check for date overlap with existing items
+      const existingItems = await prisma.cartItem.findMany({
+        where: {
+          cartId: cart.id,
+          itemType,
+          itemId,
+          OR: [
+            {
+              AND: [
+                { startDate: { lte: start } },
+                { 
+                  OR: [
+                    { endDate: { gte: start } },
+                    { endDate: null, startDate: start }
+                  ]
+                }
+              ]
+            },
+            endDate && {
+              AND: [
+                { startDate: { lte: end } },
+                { 
+                  OR: [
+                    { endDate: { gte: end } },
+                    { endDate: null, startDate: end }
+                  ]
+                }
+              ]
+            },
+            {
+              AND: [
+                { startDate: { gte: start } },
+                endDate ? { endDate: { lte: end } } : { startDate: start }
+              ]
+            }
+          ].filter(Boolean)
+        }
+      });
+
+      if (existingItems.length > 0) {
+        return new NextResponse(
+          JSON.stringify({ 
+            error: "There is already a booking for this item during the selected dates", 
+            code: "DATE_OVERLAP" 
+          }), 
+          { status: 400 }
+        );
+      }
+
+      // Validate and sanitize additionalInfo
+      const sanitizedAdditionalInfo = additionalInfo ? {
+        ...additionalInfo,
+        name: String(additionalInfo.name || ''),
+        price: typeof additionalInfo.price === 'number' ? additionalInfo.price : 0,
+        quantity: typeof additionalInfo.quantity === 'number' ? additionalInfo.quantity : 1
+      } : {};
+
+      // Create a new cart item
+      const cartItem = await prisma.cartItem.create({
+        data: {
+          cartId: cart.id,
+          itemType,
+          itemId,
+          quantity,
+          price,
+          startDate: start,
+          endDate: endDate ? end : null,
+          additionalInfo: sanitizedAdditionalInfo
+        }
+      });
+
+      return NextResponse.json(cartItem);
+    } catch (error) {
+      console.error("[CART_ITEM_ERROR]", error);
+      if (error instanceof Error && error.message.includes('Prisma')) {
+        return new NextResponse(
+          JSON.stringify({ 
+            error: "Database error while adding item to cart", 
+            code: "DB_ERROR" 
+          }), 
+          { status: 500 }
+        );
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error("[CART_POST]", error);
+    return new NextResponse(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : "An unexpected error occurred",
+        code: "INTERNAL_ERROR"
+      }), 
+      { status: 500 }
+    );
+  }
+}
+
+// Remove item from cart or clear entire cart
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email) {
+      return new NextResponse(
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_ERROR" }), 
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const itemId = searchParams.get('itemId');
 
     const user = await prisma.user.findUnique({
       where: {
@@ -152,142 +253,49 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    if (!user) {
-      return new NextResponse("User not found", { status: 404 });
+    if (!user?.cart) {
+      return NextResponse.json({ success: true });
     }
 
-    const body = await request.json();
-    const { itemType, itemId, quantity, price, startDate, endDate, additionalInfo } = body;
+    try {
+      if (itemId) {
+        // Remove specific item
+        await prisma.cartItem.delete({
+          where: {
+            id: parseInt(itemId)
+          }
+        });
+      } else {
+        // Clear entire cart
+        await prisma.cartItem.deleteMany({
+          where: {
+            cartId: user.cart.id
+          }
+        });
+      }
 
-    // Validar disponibilidad según el tipo de item
-    const startDateTime = new Date(startDate);
-    const endDateTime = endDate ? new Date(endDate) : startDateTime;
-
-    if (itemType === 'HOTEL') {
-      const isAvailable = await checkHotelAvailability(itemId, startDateTime, endDateTime, quantity);
-      if (!isAvailable) {
+      return NextResponse.json({ success: true });
+    } catch (error) {
+      console.error("[CART_DELETE_ITEM]", error);
+      if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
         return new NextResponse(
           JSON.stringify({ 
-            error: "Hotel not available for selected dates or number of guests",
-            code: "AVAILABILITY_ERROR"
+            error: "Item not found in cart", 
+            code: "NOT_FOUND" 
           }), 
-          { status: 400 }
+          { status: 404 }
         );
       }
-    } else if (itemType === 'VEHICLE') {
-      const isAvailable = await checkVehicleAvailability(itemId, startDateTime, endDateTime);
-      if (!isAvailable) {
-        return new NextResponse(
-          JSON.stringify({ 
-            error: "Vehicle not available for selected dates",
-            code: "AVAILABILITY_ERROR"
-          }), 
-          { status: 400 }
-        );
-      }
+      throw error;
     }
-
-    // Get or create cart
-    let cart = user.cart;
-    if (!cart) {
-      cart = await prisma.cart.create({
-        data: {
-          userId: user.id
-        }
-      });
-    }
-
-    // Check if item already exists in cart
-    const existingItem = await prisma.cartItem.findUnique({
-      where: {
-        cartId_itemType_itemId: {
-          cartId: cart.id,
-          itemType,
-          itemId
-        }
-      }
-    });
-
-    if (existingItem) {
-      // Update existing item
-      const updatedItem = await prisma.cartItem.update({
-        where: {
-          id: existingItem.id
-        },
-        data: {
-          quantity,
-          price,
-          startDate: startDateTime,
-          endDate: endDateTime,
-          additionalInfo
-        }
-      });
-      return NextResponse.json(updatedItem);
-    }
-
-    // Create new cart item
-    const cartItem = await prisma.cartItem.create({
-      data: {
-        cartId: cart.id,
-        itemType,
-        itemId,
-        quantity,
-        price,
-        startDate: startDateTime,
-        endDate: endDateTime,
-        additionalInfo
-      }
-    });
-
-    return NextResponse.json(cartItem);
-  } catch (error) {
-    console.error("[CART_POST]", error);
-    
-    if (error instanceof Error) {
-      return new NextResponse(
-        JSON.stringify({ 
-          error: error.message,
-          code: "INTERNAL_ERROR"
-        }), 
-        { status: 500 }
-      );
-    }
-    
-    return new NextResponse(
-      JSON.stringify({ 
-        error: "An unexpected error occurred",
-        code: "INTERNAL_ERROR"
-      }), 
-        { status: 500 }
-    );
-  }
-}
-
-// Remove item from cart
-export async function DELETE(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.email) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const itemId = searchParams.get('itemId');
-
-    if (!itemId) {
-      return new NextResponse("Item ID is required", { status: 400 });
-    }
-
-    const cartItem = await prisma.cartItem.delete({
-      where: {
-        id: parseInt(itemId)
-      }
-    });
-
-    return NextResponse.json(cartItem);
   } catch (error) {
     console.error("[CART_DELETE]", error);
-    return new NextResponse("Internal error", { status: 500 });
+    return new NextResponse(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : "An unexpected error occurred",
+        code: "INTERNAL_ERROR" 
+      }), 
+      { status: 500 }
+    );
   }
 }

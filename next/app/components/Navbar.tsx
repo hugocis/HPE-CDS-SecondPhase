@@ -39,10 +39,42 @@ export default function Navbar() {
   };
 
   const navigationItems = [
-    { name: 'Hotels', path: '/book-hotel' },
-    { name: 'Routes', path: '/book-route' },
-    { name: 'Services', path: '/book-service' },
-    { name: 'Vehicles', path: '/book-vehicle' }
+    { 
+      name: 'Hotels', 
+      path: '/book-hotel',
+      icon: (
+        <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      )
+    },
+    { 
+      name: 'Routes', 
+      path: '/book-route',
+      icon: (
+        <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+        </svg>
+      )
+    },
+    { 
+      name: 'Services', 
+      path: '/book-service',
+      icon: (
+        <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      )
+    },
+    { 
+      name: 'Vehicles', 
+      path: '/book-vehicle',
+      icon: (
+        <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16v-4m4 4v-4m4 4v-4M4 20h16a2 2 0 002-2V6a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      )
+    }
   ];
 
   return (
@@ -77,6 +109,7 @@ export default function Navbar() {
                           : 'border-transparent text-gray-700 hover:text-green-600 hover:border-green-300'
                       }`}
                     >
+                      {item.icon}
                       {item.name}
                     </Link>
                   ))}
@@ -187,12 +220,13 @@ export default function Navbar() {
                   <Link
                     key={item.name}
                     href={item.path}
-                    className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
+                    className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
                       isActivePath(item.path)
                         ? 'bg-green-50 text-green-600'
                         : 'text-gray-700 hover:bg-green-50 hover:text-green-600'
                     }`}
                   >
+                    {item.icon}
                     {item.name}
                   </Link>
                 ))}

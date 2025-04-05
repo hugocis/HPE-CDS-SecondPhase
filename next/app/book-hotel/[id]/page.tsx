@@ -97,19 +97,22 @@ export default function HotelDetails() {
           additionalInfo: {
             hotelName: hotel.name,
             nights: totalNights,
-            pricePerNight: hotel.calculatedData.pricePerNight
+            pricePerNight: hotel.calculatedData.pricePerNight,
+            guests: bookingData.guests
           }
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to add to cart');
+        throw new Error(data.error || 'Failed to add to cart');
       }
 
       router.push('/checkout');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      alert('Failed to add item to cart. Please try again.');
+      alert(error instanceof Error ? error.message : 'Failed to add item to cart. Please try again.');
     } finally {
       setAddingToCart(false);
     }

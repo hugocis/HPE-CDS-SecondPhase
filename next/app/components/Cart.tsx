@@ -11,7 +11,17 @@ interface CartItem {
   price: number;
   startDate: string;
   endDate: string | null;
-  additionalInfo: any;
+  additionalInfo: {
+    name?: string;
+    hotelName?: string;
+    serviceName?: string;
+    routeName?: string;
+    vehicleName?: string;
+    nights?: number;
+    pricePerNight?: number;
+    guests?: number;
+    [key: string]: any;
+  };
 }
 
 interface CartProps {
@@ -22,6 +32,7 @@ interface CartProps {
 export default function Cart({ isOpen, onClose }: CartProps) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -32,12 +43,17 @@ export default function Cart({ isOpen, onClose }: CartProps) {
 
   const fetchCartItems = async () => {
     try {
+      setError(null);
       const response = await fetch('/api/cart');
-      if (!response.ok) throw new Error('Failed to fetch cart items');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch cart items');
+      }
       const data = await response.json();
       setItems(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching cart items:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load cart items');
       setItems([]);
     } finally {
       setLoading(false);
@@ -46,14 +62,50 @@ export default function Cart({ isOpen, onClose }: CartProps) {
 
   const removeItem = async (itemId: number) => {
     try {
+      setError(null);
       const response = await fetch(`/api/cart?itemId=${itemId}`, {
         method: 'DELETE',
       });
-      if (!response.ok) throw new Error('Failed to remove item');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove item');
+      }
+      
       await fetchCartItems();
     } catch (error) {
       console.error('Error removing item:', error);
+      setError(error instanceof Error ? error.message : 'Failed to remove item');
     }
+  };
+
+  const getItemName = (item: CartItem): string => {
+    const info = item.additionalInfo;
+    return (
+      info.name ||
+      info.hotelName ||
+      info.serviceName ||
+      info.routeName ||
+      info.vehicleName ||
+      `${item.itemType} #${item.itemId}`
+    );
+  };
+
+  const getItemDetails = (item: CartItem): string[] => {
+    const details: string[] = [];
+    const info = item.additionalInfo;
+
+    if (info.nights) {
+      details.push(`${info.nights} night${info.nights > 1 ? 's' : ''}`);
+    }
+    if (info.pricePerNight) {
+      details.push(`€${info.pricePerNight.toFixed(2)}/night`);
+    }
+    if (info.guests) {
+      details.push(`${info.guests} guest${info.guests > 1 ? 's' : ''}`);
+    }
+
+    return details;
   };
 
   const getTotalAmount = () => {
@@ -93,6 +145,16 @@ export default function Cart({ isOpen, onClose }: CartProps) {
               <div className="flex justify-center items-center h-full">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
               </div>
+            ) : error ? (
+              <div className="text-center text-red-600 p-4">
+                <p>{error}</p>
+                <button
+                  onClick={fetchCartItems}
+                  className="mt-2 text-sm text-green-600 hover:text-green-700"
+                >
+                  Try again
+                </button>
+              </div>
             ) : !items || items.length === 0 ? (
               <p className="text-center text-gray-500">Your cart is empty</p>
             ) : (
@@ -102,13 +164,11 @@ export default function Cart({ isOpen, onClose }: CartProps) {
                     key={item.id}
                     className="flex justify-between items-start border-b pb-4"
                   >
-                    <div>
-                      <p className="font-medium">
-                        {item.additionalInfo?.name || `${item.itemType} #${item.itemId}`}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Quantity: {item.quantity}
-                      </p>
+                    <div className="space-y-1">
+                      <p className="font-medium">{getItemName(item)}</p>
+                      {getItemDetails(item).map((detail, index) => (
+                        <p key={index} className="text-sm text-gray-600">{detail}</p>
+                      ))}
                       <p className="text-sm text-gray-600">
                         Start: {new Date(item.startDate).toLocaleDateString()}
                       </p>
