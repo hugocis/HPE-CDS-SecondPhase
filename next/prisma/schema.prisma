@@ -1,0 +1,112 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Model for tourist routes
+model Route {
+  id               Int             @id @default(autoincrement())
+  name             String          @unique
+  routeType        String?         // Cultural, Adventure, etc.
+  lengthKm         Float?
+  durationHr       Float?
+  popularity       Int?
+  // Relations
+  transportUsages  TransportUsage[]
+  reviews          Review[]        @relation("RouteReviews")
+}
+
+// Model for transport usage
+model TransportUsage {
+  id                   Int      @id @default(autoincrement())
+  date                 DateTime
+  vehicleTypeId        Int
+  vehicleType          VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  userCount            Int
+  averageTravelTimeMin Float
+  popularRouteId       Int?
+  popularRoute         Route?   @relation(fields: [popularRouteId], references: [id])
+}
+
+// Model for vehicle types
+model VehicleType {
+  id             Int              @id @default(autoincrement())
+  name           String           @unique
+  transportUsages TransportUsage[]
+}
+
+// Model for hotels
+model Hotel {
+  id                Int                @id @default(autoincrement())
+  name              String             @unique
+  // Relations
+  occupancyData     HotelOccupancy[]
+  sustainabilityData HotelSustainability[]
+  reviews           Review[]           @relation("HotelReviews")
+}
+
+// Model for hotel occupancy data
+model HotelOccupancy {
+  id                  Int      @id @default(autoincrement())
+  hotelId             Int
+  hotel               Hotel    @relation(fields: [hotelId], references: [id])
+  date                DateTime
+  occupancyRate       Float
+  confirmedBookings   Int
+  cancellations       Int
+  averagePricePerNight Float
+}
+
+// Model for hotel sustainability data
+model HotelSustainability {
+  id                Int      @id @default(autoincrement())
+  hotelId           Int
+  hotel             Hotel    @relation(fields: [hotelId], references: [id])
+  date              DateTime
+  energyConsumptionKwh Float
+  wasteGeneratedKg   Float
+  recyclingPercentage Float
+  waterUsageM3       Float
+}
+
+// Model for tourism services
+model Service {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  type    String   // Service, Route, Hotel
+  reviews Review[] @relation("ServiceReviews")
+}
+
+// Model for tourism reviews
+model Review {
+  id            Int       @id @default(autoincrement())
+  date          DateTime
+  rating        Int
+  comment       String?
+  language      String?
+  
+  // Relations with different types of services
+  serviceId     Int?
+  service       Service?  @relation("ServiceReviews", fields: [serviceId], references: [id])
+  
+  hotelId       Int?
+  hotel         Hotel?    @relation("HotelReviews", fields: [hotelId], references: [id])
+  
+  routeId       Int?
+  route         Route?    @relation("RouteReviews", fields: [routeId], references: [id])
+}
