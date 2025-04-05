@@ -46,11 +46,21 @@ export async function GET(request: Request) {
       const nameParts = route.name.split(' - ');
       const isSimpleRoute = nameParts.length === 2 && !isNaN(Number(nameParts[1]));
 
+      // Para rutas compuestas, extraer origen y destino del nombre
+      let origin = null;
+      let destination = null;
+      if (!isSimpleRoute && nameParts.length >= 2) {
+        origin = nameParts[0].trim();
+        destination = nameParts[nameParts.length - 1].trim();
+      }
+
       return {
         id: route.id,
         name: route.name,
         type: route.routeType || 'General',
         routeClass: isSimpleRoute ? 'simple' : 'composite',
+        origin: origin,
+        destination: destination,
         details: {
           lengthKm: route.lengthKm ? route.lengthKm / 10 : null,
           durationHr: route.durationHr ? route.durationHr / 10 : null,
@@ -83,15 +93,12 @@ export async function GET(request: Request) {
 
     // Sort by popularity
     const sortedRoutes = [...filteredRoutes].sort((a, b) => 
-      (b.details.popularity || 0) - (a.details.popularity || 0)
+      b.details.popularity - a.details.popularity
     );
 
-    return NextResponse.json(sortedRoutes);
+    return new Response(JSON.stringify(sortedRoutes));
   } catch (error) {
-    console.error('Error fetching routes:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch routes' },
-      { status: 500 }
-    );
+    console.error('Error:', error);
+    return new Response(JSON.stringify({ error: 'Failed to load routes' }), { status: 500 });
   }
 }

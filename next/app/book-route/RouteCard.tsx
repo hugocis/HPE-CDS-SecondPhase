@@ -34,11 +34,11 @@ export function RouteCard({ route }: RouteCardProps) {
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xl font-semibold text-gray-800">{route.name}</h3>
-          <div className="flex gap-2">
-            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+      <div className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-800">{route.name}</h3>
+          <div className="flex flex-wrap gap-2">
+            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm whitespace-nowrap">
               {route.type}
             </span>
           </div>
@@ -46,12 +46,12 @@ export function RouteCard({ route }: RouteCardProps) {
         
         <div className="space-y-4">
           <div className="text-sm text-gray-600">
-            <div className="flex space-x-4">
+            <div className="flex flex-wrap gap-4">
               {route.details.lengthKm && (
-                <span>📍 {route.details.lengthKm} km</span>
+                <span className="inline-flex items-center">📍 {route.details.lengthKm} km</span>
               )}
               {route.details.durationHr && (
-                <span>⏱️ {formatDuration(route.details.durationHr)}</span>
+                <span className="inline-flex items-center">⏱️ {formatDuration(route.details.durationHr)}</span>
               )}
             </div>
             <span className="flex items-center mt-2">
@@ -59,7 +59,7 @@ export function RouteCard({ route }: RouteCardProps) {
             </span>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <StarRating rating={route.stats.averageRating} />
               <p className="text-sm text-gray-600 mt-1">
@@ -68,14 +68,14 @@ export function RouteCard({ route }: RouteCardProps) {
             </div>
             <div className="text-right">
               <div className="text-sm font-medium text-gray-600">Popularity</div>
-              <div className="text-lg font-semibold text-green-600">
+              <div className="text-lg sm:text-xl font-semibold text-green-600">
                 {route.details.popularity}%
               </div>
             </div>
           </div>
 
           <Link href={`/book-route/${route.id}`}>
-            <button className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors">
+            <button className="w-full bg-green-600 text-white py-2.5 px-4 rounded-lg hover:bg-green-700 transition-colors">
               View Route
             </button>
           </Link>

@@ -15,26 +15,17 @@ export default function HotelDetails() {
         const res = await fetch(`/api/hotels/${params.id}`);
         if (!res.ok) throw new Error('Failed to fetch hotel details');
         const data = await res.json();
-        
-        // Calcular la puntuación media
-        if (data.reviews && data.reviews.length > 0) {
-          const totalRating = data.reviews.reduce((acc: number, review: any) => acc + review.rating, 0);
-          const avgRating = totalRating / data.reviews.length;
-          setAverageRating(avgRating);
-          
-          // Ordenar las reseñas por puntuación (de mayor a menor) y fecha
-          data.reviews.sort((a: any, b: any) => {
-            if (b.rating !== a.rating) {
-              return b.rating - a.rating;
-            }
-            return new Date(b.date).getTime() - new Date(a.date).getTime();
-          });
-        }
-        
         setHotel(data);
+        
+        // Calcular rating promedio
+        if (data.reviews && data.reviews.length > 0) {
+          const avg = data.reviews.reduce((acc: number, review: any) => acc + review.rating, 0) / data.reviews.length;
+          setAverageRating(avg);
+        }
+
+        setLoading(false);
       } catch (error) {
         console.error('Error:', error);
-      } finally {
         setLoading(false);
       }
     }
@@ -46,7 +37,7 @@ export default function HotelDetails() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto p-4 sm:p-8">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="space-y-4">
@@ -61,20 +52,20 @@ export default function HotelDetails() {
 
   if (!hotel) {
     return (
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto p-4 sm:p-8">
         <h1 className="text-2xl font-bold text-red-600">Hotel not found</h1>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-8">
-      <h1 className="text-3xl font-bold text-green-700 mb-6">{hotel.name}</h1>
+    <div className="container mx-auto p-4 sm:p-8">
+      <h1 className="text-2xl sm:text-3xl font-bold text-green-700 mb-6">{hotel.name}</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Información principal */}
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Hotel Information</h2>
             <div className="space-y-3">
               <p className="text-gray-600">
@@ -90,7 +81,7 @@ export default function HotelDetails() {
           </div>
 
           {/* Métricas de sostenibilidad */}
-          <div className="bg-green-50 rounded-lg shadow-md p-6">
+          <div className="bg-green-50 rounded-lg shadow-md p-4 sm:p-6">
             <h2 className="text-xl font-semibold text-green-800 mb-4">Sustainability Metrics</h2>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -114,60 +105,66 @@ export default function HotelDetails() {
         </div>
 
         {/* Formulario de reserva */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Book Your Stay</h2>
-          <form className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Check-in Date</label>
-              <input
-                type="date"
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                min={new Date().toISOString().split('T')[0]}
-              />
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Book Your Stay</h2>
+            <form className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Check-in Date</label>
+                <input
+                  type="date"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Check-out Date</label>
+                <input
+                  type="date"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Guests</label>
+                <input
+                  type="number"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                  min="1"
+                  max="4"
+                  defaultValue="2"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors mt-4"
+              >
+                Confirm Booking
+              </button>
+            </form>
+          </div>
+
+          {/* Reviews summary */}
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Reviews Overview</h2>
+              <div className="flex items-center space-x-2">
+                <span className="text-lg font-semibold text-gray-700">{averageRating.toFixed(1)}</span>
+                <div className="flex items-center">
+                  <span className="text-2xl text-yellow-400">{'★'.repeat(Math.round(averageRating))}</span>
+                  <span className="text-2xl text-gray-300">{'★'.repeat(5 - Math.round(averageRating))}</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Check-out Date</label>
-              <input
-                type="date"
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Number of Guests</label>
-              <input
-                type="number"
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                min="1"
-                max="4"
-                defaultValue="2"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors mt-4"
-            >
-              Confirm Booking
-            </button>
-          </form>
+            <p className="text-gray-600 mb-2">{hotel.reviews.length} reviews</p>
+          </div>
         </div>
       </div>
 
-      {/* Reseñas */}
+      {/* Sección de reseñas */}
       {hotel.reviews && hotel.reviews.length > 0 && (
-        <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">Guest Reviews</h2>
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center">
-                <span className="text-2xl text-yellow-400">{'★'.repeat(Math.round(averageRating))}</span>
-                <span className="text-2xl text-gray-300">{'★'.repeat(5 - Math.round(averageRating))}</span>
-              </div>
-              <span className="text-lg font-semibold text-gray-700">{averageRating.toFixed(1)}</span>
-              <span className="text-gray-500">({hotel.reviews.length} reviews)</span>
-            </div>
-          </div>
-          
+        <div className="mt-8 bg-white rounded-lg shadow-md p-4 sm:p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">Guest Reviews</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {hotel.reviews.map((review: any) => (
               <div key={review.id} className="bg-gray-50 p-4 rounded-md">

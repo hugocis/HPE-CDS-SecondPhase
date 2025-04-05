@@ -36,10 +36,10 @@ export function VehicleCard({ vehicle }: VehicleCardProps) {
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-4">
-          <span className="text-3xl">{vehicleIcons[vehicle.name] || '🚗'}</span>
-          <h3 className="text-xl font-semibold text-gray-800">{vehicle.name}</h3>
+          <span className="text-2xl sm:text-3xl">{vehicleIcons[vehicle.name] || '🚗'}</span>
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-800">{vehicle.name}</h3>
         </div>
         
         <div className="space-y-4">
@@ -61,14 +61,14 @@ export function VehicleCard({ vehicle }: VehicleCardProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div className="text-center p-3 bg-green-50 rounded-lg">
-              <p className="text-sm text-gray-600">Avg. Travel Time</p>
-              <p className="text-lg font-semibold text-gray-800">{vehicle.stats.averageTravelTime} min</p>
+              <p className="text-xs sm:text-sm text-gray-600">Avg. Travel Time</p>
+              <p className="text-base sm:text-lg font-semibold text-gray-800">{vehicle.stats.averageTravelTime} min</p>
             </div>
             <div className="text-center p-3 bg-green-50 rounded-lg">
-              <p className="text-sm text-gray-600">Daily Users</p>
-              <p className="text-lg font-semibold text-gray-800">{vehicle.stats.averageUserCount}</p>
+              <p className="text-xs sm:text-sm text-gray-600">Daily Users</p>
+              <p className="text-base sm:text-lg font-semibold text-gray-800">{vehicle.stats.averageUserCount}</p>
             </div>
           </div>
 

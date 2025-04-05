@@ -118,25 +118,22 @@ export default function BookHotel() {
   }, [searchParams]);
 
   return (
-    <div className="container mx-auto p-8">
-      <h1 className="text-3xl font-bold text-green-700 mb-8">Book an Eco-Friendly Hotel</h1>
-      
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+    <div className="container mx-auto p-4 sm:p-8">
+      <h1 className="text-3xl font-bold text-green-700 mb-4">Hotels</h1>
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8">
         <p className="text-gray-600">
-          Discover our selection of certified eco-friendly accommodations. Each hotel is evaluated based on its 
-          environmental practices, including energy efficiency, waste management, and recycling programs. Use our 
-          filtering system to find hotels that match your preferences for price and sustainability scores.
+          Find eco-friendly accommodations in GreenLake City. Compare sustainability scores and choose the perfect stay.
         </p>
       </div>
       
-      <div className="flex gap-8">
+      <div className="flex flex-col lg:flex-row gap-8">
         {/* Sidebar con filtros */}
-        <div className="w-1/4">
+        <div className="w-full lg:w-1/4 lg:sticky lg:top-8">
           <FilterSection />
         </div>
         
         {/* Contenido principal */}
-        <div className="w-3/4">
+        <div className="w-full lg:w-3/4">
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[1, 2, 3, 4].map((n) => (

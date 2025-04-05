@@ -24,26 +24,26 @@ export function ServiceCard({ service }: ServiceCardProps) {
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300">
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="flex flex-col h-full">
           <div className="mb-4">
-            <div className="flex items-start justify-between mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
               <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-gray-800">{companyName}</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-800">{companyName}</h3>
                 {activityName && (
-                  <p className="text-base text-gray-600">{activityName}</p>
+                  <p className="text-sm sm:text-base text-gray-600">{activityName}</p>
                 )}
               </div>
-              <span className="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full whitespace-nowrap ml-2">
+              <span className="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full whitespace-nowrap self-start sm:self-center">
                 {service.type}
               </span>
             </div>
           </div>
 
           <div className="flex-grow">
-            <div className="flex items-center space-x-1 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4">
               <StarRating rating={service.stats.averageRating} />
-              <span className="text-sm text-gray-600 ml-2">
+              <span className="text-sm text-gray-600">
                 ({service.stats.totalReviews} {service.stats.totalReviews === 1 ? 'review' : 'reviews'})
               </span>
             </div>
