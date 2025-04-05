@@ -54,6 +54,11 @@ export default function ServiceDetails() {
     try {
       const totalAmount = service.price * bookingData.quantity;
 
+      // Calculate service eco score based on ratings and reviews
+      const ratingScore = service.stats.averageRating * 15; // Up to 75 points from ratings
+      const popularityScore = Math.min((service.stats.totalReviews / 20) * 25, 25); // Up to 25 points from popularity
+      const ecoScore = Math.min(Math.round(ratingScore + popularityScore), 100);
+
       const response = await fetch('/api/cart', {
         method: 'POST',
         headers: {
@@ -69,7 +74,8 @@ export default function ServiceDetails() {
           additionalInfo: {
             serviceName: service.name,
             serviceType: service.type,
-            pricePerUnit: service.price
+            pricePerUnit: service.price,
+            ecoScore: ecoScore
           }
         }),
       });

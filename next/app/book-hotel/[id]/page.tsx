@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { registerLocale } from "react-datepicker";
+import { es } from 'date-fns/locale/es';
+
+registerLocale('es', es);
 
 export default function HotelDetails() {
   const params = useParams();
@@ -12,8 +18,8 @@ export default function HotelDetails() {
   const [loading, setLoading] = useState(true);
   const [averageRating, setAverageRating] = useState<number>(0);
   const [bookingData, setBookingData] = useState({
-    checkIn: '',
-    checkOut: '',
+    checkIn: null as Date | null,
+    checkOut: null as Date | null,
     guests: 2
   });
   const [totalNights, setTotalNights] = useState(0);
@@ -27,7 +33,6 @@ export default function HotelDetails() {
         const data = await res.json();
         setHotel(data);
 
-        // Calcular rating promedio
         if (data.reviews && data.reviews.length > 0) {
           const avg = data.reviews.reduce((acc: number, review: any) => acc + review.rating, 0) / data.reviews.length;
           setAverageRating(avg);
@@ -45,23 +50,41 @@ export default function HotelDetails() {
     }
   }, [params.id]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleDateChange = (date: Date | null, type: 'checkIn' | 'checkOut') => {
     setBookingData(prev => ({
       ...prev,
-      [name]: value
+      [type]: date
     }));
 
-    // Calculate total nights when dates change
-    if (name === 'checkIn' || name === 'checkOut') {
-      const startDate = name === 'checkIn' ? new Date(value) : new Date(bookingData.checkIn);
-      const endDate = name === 'checkOut' ? new Date(value) : new Date(bookingData.checkOut);
+    if (type === 'checkIn' && date) {
+      // Si la fecha de checkout es anterior a la nueva fecha de check-in, la reseteamos
+      if (bookingData.checkOut && date > bookingData.checkOut) {
+        setBookingData(prev => ({
+          ...prev,
+          checkOut: null,
+          [type]: date
+        }));
+      }
+    }
 
-      if (bookingData.checkIn && bookingData.checkOut) {
+    // Calcular noches cuando ambas fechas están seleccionadas
+    if (bookingData.checkIn && bookingData.checkOut) {
+      const startDate = type === 'checkIn' ? date : bookingData.checkIn;
+      const endDate = type === 'checkOut' ? date : bookingData.checkOut;
+      
+      if (startDate && endDate) {
         const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
         setTotalNights(Math.max(0, nights));
       }
     }
+  };
+
+  const handleGuestsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    setBookingData(prev => ({
+      ...prev,
+      guests: value
+    }));
   };
 
   const handleAddToCart = async (e: React.FormEvent) => {
@@ -72,8 +95,8 @@ export default function HotelDetails() {
       return;
     }
 
-    if (!bookingData.checkIn || !bookingData.checkOut) {
-      alert('Please select check-in and check-out dates');
+    if (!bookingData.checkIn || !bookingData.checkOut || totalNights <= 0) {
+      alert('Por favor, selecciona fechas válidas de entrada y salida');
       return;
     }
 
@@ -82,37 +105,45 @@ export default function HotelDetails() {
     try {
       const totalAmount = hotel.calculatedData.pricePerNight * totalNights;
 
+      if (!totalAmount || totalAmount <= 0) {
+        throw new Error('Error al calcular el precio total');
+      }
+
+      const cartData = {
+        itemType: 'HOTEL',
+        itemId: parseInt(params.id as string),
+        quantity: bookingData.guests || 1,
+        price: totalAmount,
+        startDate: bookingData.checkIn.toISOString(),
+        endDate: bookingData.checkOut.toISOString(),
+        additionalInfo: {
+          hotelName: hotel.name,
+          nights: totalNights,
+          pricePerNight: hotel.calculatedData.pricePerNight,
+          guests: bookingData.guests,
+          displayStartDate: bookingData.checkIn.toLocaleDateString('es-ES'),
+          displayEndDate: bookingData.checkOut.toLocaleDateString('es-ES')
+        }
+      };
+
       const response = await fetch('/api/cart', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          itemType: 'HOTEL',
-          itemId: parseInt(params.id as string),
-          quantity: bookingData.guests,
-          price: totalAmount,
-          startDate: bookingData.checkIn,
-          endDate: bookingData.checkOut,
-          additionalInfo: {
-            hotelName: hotel.name,
-            nights: totalNights,
-            pricePerNight: hotel.calculatedData.pricePerNight,
-            guests: bookingData.guests
-          }
-        }),
+        body: JSON.stringify(cartData),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to add to cart');
+        throw new Error(data.error || 'Error al añadir al carrito');
       }
 
       router.push('/checkout');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      alert(error instanceof Error ? error.message : 'Failed to add item to cart. Please try again.');
+      alert(error instanceof Error ? error.message : 'Error al añadir al carrito. Por favor, inténtalo de nuevo.');
     } finally {
       setAddingToCart(false);
     }
@@ -194,25 +225,27 @@ export default function HotelDetails() {
             <form className="space-y-4" onSubmit={handleAddToCart}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Check-in Date</label>
-                <input
-                  type="date"
-                  name="checkIn"
-                  value={bookingData.checkIn}
-                  onChange={handleInputChange}
+                <DatePicker
+                  selected={bookingData.checkIn}
+                  onChange={(date) => handleDateChange(date, 'checkIn')}
+                  dateFormat="dd/MM/yyyy"
+                  minDate={new Date()}
+                  locale="es"
+                  placeholderText="Select check-in date"
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                  min={new Date().toISOString().split('T')[0]}
                   required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Check-out Date</label>
-                <input
-                  type="date"
-                  name="checkOut"
-                  value={bookingData.checkOut}
-                  onChange={handleInputChange}
+                <DatePicker
+                  selected={bookingData.checkOut}
+                  onChange={(date) => handleDateChange(date, 'checkOut')}
+                  dateFormat="dd/MM/yyyy"
+                  minDate={bookingData.checkIn || new Date()}
+                  locale="es"
+                  placeholderText="Select check-out date"
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                  min={bookingData.checkIn || new Date().toISOString().split('T')[0]}
                   required
                 />
               </div>
@@ -220,9 +253,8 @@ export default function HotelDetails() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Number of Guests</label>
                 <input
                   type="number"
-                  name="guests"
                   value={bookingData.guests}
-                  onChange={handleInputChange}
+                  onChange={handleGuestsChange}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                   min="1"
                   max="4"

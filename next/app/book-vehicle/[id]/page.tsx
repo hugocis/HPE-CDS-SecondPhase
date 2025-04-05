@@ -65,13 +65,17 @@ export default function VehicleDetails() {
     }
 
     if (!bookingData.startDate || !bookingData.endDate) {
-      alert('Please select rental dates');
+      alert('Please select start and end dates');
       return;
     }
 
     setAddingToCart(true);
 
     try {
+      const totalDays = Math.ceil(
+        (new Date(bookingData.endDate).getTime() - new Date(bookingData.startDate).getTime()) / 
+        (1000 * 60 * 60 * 24)
+      );
       const totalAmount = vehicle.rentalPrice * totalDays * bookingData.quantity;
 
       const response = await fetch('/api/cart', {
@@ -90,7 +94,8 @@ export default function VehicleDetails() {
             vehicleName: vehicle.name,
             vehicleType: vehicle.type,
             pricePerDay: vehicle.rentalPrice,
-            days: totalDays
+            days: totalDays,
+            ecoScore: vehicle.environmentalImpact.ecoScore
           }
         }),
       });

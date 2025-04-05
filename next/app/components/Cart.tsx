@@ -17,6 +17,8 @@ interface CartItem {
     serviceName?: string;
     routeName?: string;
     vehicleName?: string;
+    displayStartDate?: string;
+    displayEndDate?: string;
     nights?: number;
     pricePerNight?: number;
     guests?: number;
@@ -89,6 +91,15 @@ export default function Cart({ isOpen, onClose }: CartProps) {
       info.vehicleName ||
       `${item.itemType} #${item.itemId}`
     );
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
 
   const getItemDetails = (item: CartItem): string[] => {
@@ -170,11 +181,11 @@ export default function Cart({ isOpen, onClose }: CartProps) {
                         <p key={index} className="text-sm text-gray-600">{detail}</p>
                       ))}
                       <p className="text-sm text-gray-600">
-                        Start: {new Date(item.startDate).toLocaleDateString()}
+                        Start: {item.additionalInfo.displayStartDate || formatDate(item.startDate)}
                       </p>
                       {item.endDate && (
                         <p className="text-sm text-gray-600">
-                          End: {new Date(item.endDate).toLocaleDateString()}
+                          End: {item.additionalInfo.displayEndDate || formatDate(item.endDate)}
                         </p>
                       )}
                       <button

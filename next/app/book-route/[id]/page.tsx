@@ -25,6 +25,7 @@ interface Route {
     usageCount: number;
     averageUsers: number;
     averageTravelTime: number;
+    ecoScore?: number;
   }>;
   reviews: Array<{
     id: number;
@@ -107,6 +108,11 @@ export default function RouteDetails() {
       const transportMultiplier = transport ? (transport.averageTravelTime / 60) : 1;
       const totalAmount = basePrice * bookingData.participants * transportMultiplier;
 
+      // Calculate route's eco score based on transport type and popularity
+      const transportEcoScore = transport ? transport.ecoScore || 80 : 60; // Default eco scores if not available
+      const popularityBonus = Math.min(((route?.stats?.recentUsage || 0) / 100) * 10, 20); // Up to 20 points bonus for popularity
+      const ecoScore = Math.min(Math.round(transportEcoScore + popularityBonus), 100);
+
       const response = await fetch('/api/cart', {
         method: 'POST',
         headers: {
@@ -122,7 +128,9 @@ export default function RouteDetails() {
           additionalInfo: {
             routeName: route?.name,
             transportType: bookingData.selectedTransport,
-            duration: route?.details.durationHr
+            duration: route?.details.durationHr,
+            ecoScore: ecoScore,
+            participants: bookingData.participants
           }
         }),
       });
