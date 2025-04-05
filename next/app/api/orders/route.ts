@@ -3,41 +3,8 @@ import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "../auth/[...nextauth]/route";
 
+// Get orders for the current user
 export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.email) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: {
-        email: session.user.email,
-      },
-    });
-
-    if (!user) {
-      return new NextResponse("User not found", { status: 404 });
-    }
-
-    const orders = await prisma.order.findMany({
-      where: {
-        userId: user.id,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    return NextResponse.json(orders);
-  } catch (error) {
-    console.error("[ORDERS_GET]", error);
-    return new NextResponse("Internal error", { status: 500 });
-  }
-}
-
-export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -61,6 +28,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const orders = await prisma.order.findMany({
+      where: {
+        userId: user.id,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return NextResponse.json(orders);
+  } catch (error) {
+    console.error("[ORDERS_GET]", error);
+    return new NextResponse(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : "An unexpected error occurred",
+        code: "INTERNAL_ERROR"
+      }), 
+      { status: 500 }
+    );
+  }
+}
+
+// Create a new order
+export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.email) {
+    return new NextResponse(
+      JSON.stringify({ error: "Unauthorized", code: "AUTH_ERROR" }), 
+      { status: 401 }
+    );
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      email: session.user.email,
+    },
+  });
+
+  if (!user) {
+    return new NextResponse(
+      JSON.stringify({ error: "User not found", code: "USER_ERROR" }), 
+      { status: 404 }
+    );
+  }
+
+  try {
     const body = await request.json();
     const { 
       totalAmount, 
@@ -70,8 +84,7 @@ export async function POST(request: NextRequest) {
       startDate,
       endDate,
       additionalInfo = {},
-      paymentMethod = 'CARD',
-      discount = 0 
+      paymentMethod = 'CARD'
     } = body;
 
     // Validate required fields
@@ -89,12 +102,31 @@ export async function POST(request: NextRequest) {
       items: cartItems.length > 0 ? cartItems : undefined
     };
 
+    // Check if there's already a pending order with the same details
+    const existingOrder = await prisma.order.findFirst({
+      where: {
+        userId: user.id,
+        orderType,
+        itemId,
+        totalAmount,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+        status: 'PENDING',
+        createdAt: {
+          gte: new Date(Date.now() - 5 * 60 * 1000) // Orders created in the last 5 minutes
+        }
+      }
+    });
+
+    if (existingOrder) {
+      return NextResponse.json(existingOrder);
+    }
+
     // Create the order
     const order = await prisma.order.create({
       data: {
         userId: user.id,
         totalAmount,
-        discount,
         orderType,
         itemId,
         quantity,
@@ -102,21 +134,9 @@ export async function POST(request: NextRequest) {
         endDate: endDate ? new Date(endDate) : null,
         additionalInfo: enhancedAdditionalInfo,
         paymentMethod,
+        status: 'COMPLETED' // Set as completed since we don't have real payment processing yet
       }
     });
-
-    // If EcoTokens were used (discount applied), update the user's balance
-    if (discount > 0) {
-      const tokensUsed = Math.floor(discount * 10); // 1 token = 0.1 discount
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          ecoTokens: {
-            decrement: tokensUsed
-          }
-        }
-      });
-    }
 
     return NextResponse.json(order);
   } catch (error) {
@@ -124,7 +144,7 @@ export async function POST(request: NextRequest) {
     return new NextResponse(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : "An unexpected error occurred",
-        code: "INTERNAL_ERROR"
+        code: "INTERNAL_ERROR" 
       }), 
       { status: 500 }
     );
