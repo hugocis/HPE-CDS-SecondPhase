@@ -1,130 +1,115 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+interface SustainabilityData {
+  id: number;
+  hotelId: number;
+  date: Date;
+  energyConsumptionKwh: number;
+  wasteGeneratedKg: number;
+  recyclingPercentage: number;
+  waterUsageM3: number;
+}
+
+interface OccupancyData {
+  id: number;
+  hotelId: number;
+  date: Date;
+  occupancyRate: number;
+  confirmedBookings: number;
+  cancellations: number;
+  averagePricePerNight: number;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    
-    // Convertir los precios a céntimos (multiplicar por 100) para la consulta
-    const minPrice = searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) * 100 : undefined;
-    const maxPrice = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) * 100 : undefined;
-    const minEcoScore = searchParams.get('minEcoScore') ? Number(searchParams.get('minEcoScore')) : undefined;
+    const minPrice = searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : undefined;
+    const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : undefined;
+    const minEcoScore = searchParams.get('minEcoScore') ? parseFloat(searchParams.get('minEcoScore')!) : undefined;
 
-    // Construir las condiciones de filtrado
-    const conditions = [];
-
-    // Filtrar por precio
-    if (minPrice !== undefined || maxPrice !== undefined) {
-      conditions.push({
-        occupancyData: {
-          some: {
-            AND: [
-              ...(minPrice !== undefined ? [{ averagePricePerNight: { gte: minPrice } }] : []),
-              ...(maxPrice !== undefined ? [{ averagePricePerNight: { lte: maxPrice } }] : [])
-            ]
-          }
-        }
-      });
-    }
-
-    // Filtrar por eco score
-    if (minEcoScore !== undefined) {
-      conditions.push({
-        sustainabilityData: {
-          some: {
-            recyclingPercentage: { gte: minEcoScore }
-          }
-        }
-      });
-    }
-
-    // Consulta final con ordenamiento correcto
     const hotels = await prisma.hotel.findMany({
-      where: conditions.length > 0 ? { AND: conditions } : undefined,
       include: {
-        occupancyData: {
-          orderBy: {
-            date: 'desc'
-          },
-          take: 1,
-        },
         sustainabilityData: {
           orderBy: {
             date: 'desc'
           },
-          take: 1,
+          take: 1
+        },
+        occupancyData: {
+          orderBy: {
+            date: 'desc'
+          },
+          take: 1
         },
         reviews: {
-          take: 3,
           orderBy: {
             date: 'desc'
-          }
+          },
+          take: 2
         }
       }
     });
 
-    // Formatear los resultados
     const formattedHotels = hotels.map(hotel => {
-      const sustainability = hotel.sustainabilityData[0];
-      const occupancy = hotel.occupancyData[0];
-      
+      const latestAvailability = hotel.occupancyData[0];
+
+      // Calculate eco score based on sustainability metrics
       let ecoScore = 0;
-      if (sustainability) {
-        const recyclingScore = (sustainability.recyclingPercentage / 100) * 40;
-        const energyScore = Math.min(100 - (sustainability.energyConsumptionKwh / 1000) * 10, 40);
-        const wasteScore = Math.min(100 - (sustainability.wasteGeneratedKg / 100) * 20, 20);
-        ecoScore = Math.round(recyclingScore + energyScore + wasteScore);
+      if (hotel.sustainabilityData.length > 0) {
+        const sustainability = hotel.sustainabilityData[0];
+        // Lower energy and waste is better, higher recycling is better
+        const energyScore = Math.max(0, 100 - (sustainability.energyConsumptionKwh / 10));
+        const wasteScore = Math.max(0, 100 - (sustainability.wasteGeneratedKg / 5));
+        const recyclingScore = sustainability.recyclingPercentage / 10; // Dividir entre 10 para normalizar el porcentaje
+        ecoScore = Math.round((energyScore + wasteScore + recyclingScore) / 3);
       }
 
-      // Asumimos 100 habitaciones por hotel como ejemplo
       const TOTAL_ROOMS = 100;
-      const occupancyRate = occupancy ? occupancy.occupancyRate : 0; // Ya viene como porcentaje
+      const occupancyRate = latestAvailability ? latestAvailability.occupancyRate : 0;
       const availableRooms = Math.round(TOTAL_ROOMS * (100 - occupancyRate) / 100);
 
       return {
-        ...hotel,
+        id: hotel.id,
+        name: hotel.name,
         calculatedData: {
-          ecoScore,
-          pricePerNight: occupancy ? occupancy.averagePricePerNight / 100 : 0,
+          pricePerNight: (latestAvailability?.averagePricePerNight || 0) / 100,
           availableRooms,
           totalRooms: TOTAL_ROOMS,
-          occupancyRate: occupancyRate
+          occupancyRate,
+          ecoScore
         },
         sustainabilityData: hotel.sustainabilityData.map(data => ({
           ...data,
-          recyclingPercentage: data.recyclingPercentage / 100,
-          energyConsumptionKwh: data.energyConsumptionKwh,
-          wasteGeneratedKg: data.wasteGeneratedKg,
-        }))
+          recyclingPercentage: data.recyclingPercentage / 10 // Dividir entre 10 para normalizar el porcentaje
+        })),
+        reviews: hotel.reviews
       };
     });
 
-    // Ordenar los hoteles según los criterios aplicados
-    const sortedHotels = [...formattedHotels].sort((a, b) => {
-      if (minEcoScore !== undefined) {
-        // Si hay filtro de eco score, ordenar de menor a mayor
-        return a.calculatedData.ecoScore - b.calculatedData.ecoScore;
-      } else {
-        // Si no hay filtro de eco score, ordenar por precio de menor a mayor
-        return a.calculatedData.pricePerNight - b.calculatedData.pricePerNight;
-      }
-    });
+    // Apply filters
+    let filteredHotels = formattedHotels;
+    
+    if (minPrice !== undefined) {
+      filteredHotels = filteredHotels.filter(hotel => hotel.calculatedData.pricePerNight >= minPrice);
+    }
+    
+    if (maxPrice !== undefined) {
+      filteredHotels = filteredHotels.filter(hotel => hotel.calculatedData.pricePerNight <= maxPrice);
+    }
+    
+    if (minEcoScore !== undefined) {
+      filteredHotels = filteredHotels.filter(hotel => hotel.calculatedData.ecoScore >= minEcoScore);
+    }
 
-    // Aplicar filtros adicionales después del cálculo del eco score si es necesario
-    const filteredHotels = sortedHotels.filter(hotel => {
-      const meetsEcoScore = minEcoScore ? hotel.calculatedData.ecoScore >= minEcoScore : true;
-      const meetsMinPrice = minPrice ? hotel.calculatedData.pricePerNight >= minPrice/100 : true;
-      const meetsMaxPrice = maxPrice ? hotel.calculatedData.pricePerNight <= maxPrice/100 : true;
-      
-      return meetsEcoScore && meetsMinPrice && meetsMaxPrice;
-    });
-
-    return NextResponse.json(filteredHotels);
-  } catch (error) {
-    console.error('Error fetching hotels:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch hotels' },
-      { status: 500 }
+    // Sort by eco score
+    const sortedHotels = [...filteredHotels].sort((a, b) => 
+      b.calculatedData.ecoScore - a.calculatedData.ecoScore
     );
+
+    return NextResponse.json(sortedHotels);
+  } catch (error) {
+    console.error('Error:', error);
+    return NextResponse.json({ error: 'Failed to load hotels' }, { status: 500 });
   }
 }

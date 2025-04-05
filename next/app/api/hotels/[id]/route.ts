@@ -43,7 +43,7 @@ export async function GET(
     
     let ecoScore = 0;
     if (sustainability) {
-      const recyclingScore = (sustainability.recyclingPercentage / 100) * 40;
+      const recyclingScore = (sustainability.recyclingPercentage / 10) * 40; // Dividir entre 10 para normalizar
       const energyScore = Math.min(100 - (sustainability.energyConsumptionKwh / 1000) * 10, 40);
       const wasteScore = Math.min(100 - (sustainability.wasteGeneratedKg / 100) * 20, 20);
       ecoScore = Math.round(recyclingScore + energyScore + wasteScore);
@@ -57,14 +57,14 @@ export async function GET(
       ...hotel,
       calculatedData: {
         ecoScore,
-        pricePerNight: occupancy ? occupancy.averagePricePerNight / 100 : 0,
+        pricePerNight: (occupancy ? occupancy.averagePricePerNight : 0) / 100,
         availableRooms,
         totalRooms: TOTAL_ROOMS,
         occupancyRate: occupancyRate
       },
       sustainabilityData: hotel.sustainabilityData.map(data => ({
         ...data,
-        recyclingPercentage: data.recyclingPercentage / 100,
+        recyclingPercentage: data.recyclingPercentage / 10, // Dividir entre 10 para normalizar el porcentaje
         energyConsumptionKwh: data.energyConsumptionKwh,
         wasteGeneratedKg: data.wasteGeneratedKg,
       }))

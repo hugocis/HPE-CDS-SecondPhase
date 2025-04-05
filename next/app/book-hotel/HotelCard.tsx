@@ -11,6 +11,12 @@ export function HotelCard({ hotel }: HotelCardProps) {
   const sustainability = hotel.sustainabilityData[0];
   const occupancyRate = Math.round(((hotel.calculatedData.totalRooms - hotel.calculatedData.availableRooms) / hotel.calculatedData.totalRooms) * 100);
   
+  const getOccupancyColor = (rate: number) => {
+    if (rate < 60) return 'text-green-600 bg-green-100';
+    if (rate < 80) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       <div className="p-4 sm:p-6">
@@ -25,10 +31,14 @@ export function HotelCard({ hotel }: HotelCardProps) {
           <p className="text-sm sm:text-base text-gray-600">
             <span className="font-semibold">Price:</span> €{hotel.calculatedData.pricePerNight.toFixed(2)}/night
           </p>
-          <p className="text-sm sm:text-base text-gray-600">
-            <span className="font-semibold">Occupancy:</span>{' '}
-            {occupancyRate}%
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm sm:text-base text-gray-600">
+              <span className="font-semibold">Occupancy:</span>
+            </p>
+            <span className={`px-2 py-1 rounded text-sm font-medium ${getOccupancyColor(occupancyRate)}`}>
+              {occupancyRate}%
+            </span>
+          </div>
         </div>
 
         {sustainability && (
@@ -37,7 +47,7 @@ export function HotelCard({ hotel }: HotelCardProps) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-gray-600">
               <p>Energy: {sustainability.energyConsumptionKwh} kWh</p>
               <p>Waste: {sustainability.wasteGeneratedKg} kg</p>
-              <p>Recycling: {(sustainability.recyclingPercentage * 100).toFixed(1)}%</p>
+              <p>Recycling: {sustainability.recyclingPercentage.toFixed(1)}%</p>
             </div>
           </div>
         )}
