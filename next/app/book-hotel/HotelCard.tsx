@@ -9,6 +9,7 @@ type HotelCardProps = {
 export function HotelCard({ hotel }: HotelCardProps) {
   const router = useRouter();
   const sustainability = hotel.sustainabilityData[0];
+  const occupancyRate = Math.round(((hotel.calculatedData.totalRooms - hotel.calculatedData.availableRooms) / hotel.calculatedData.totalRooms) * 100);
   
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
@@ -25,8 +26,8 @@ export function HotelCard({ hotel }: HotelCardProps) {
             <span className="font-semibold">Price:</span> €{hotel.calculatedData.pricePerNight.toFixed(2)}/night
           </p>
           <p className="text-sm sm:text-base text-gray-600">
-            <span className="font-semibold">Rooms:</span>{' '}
-            {hotel.calculatedData.availableRooms} available of {hotel.calculatedData.totalRooms} total
+            <span className="font-semibold">Occupancy:</span>{' '}
+            {occupancyRate}%
           </p>
         </div>
 
