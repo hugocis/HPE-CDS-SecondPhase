@@ -8,6 +8,7 @@ interface ServiceCardProps {
     id: number;
     name: string;
     type: string;
+    price?: number;
     stats: {
       averageRating: number;
       totalReviews: number;
@@ -21,6 +22,21 @@ export function ServiceCard({ service }: ServiceCardProps) {
   const companyEndIndex = parts.findIndex(part => part.includes("S.L.") || part.includes("S.Com."));
   const companyName = parts.slice(0, companyEndIndex + 1).join(" ");
   const activityName = parts.slice(companyEndIndex + 1).join(" ");
+
+  // Calcular el ecoScore potencial
+  const calculateEcoScore = () => {
+    const baseScore = service.stats?.averageRating ? Math.min(Math.round(service.stats.averageRating * 20), 80) : 60;
+    const isNatureRelated = (service.type?.toLowerCase().includes('nature') || 
+                           service.name?.toLowerCase().includes('nature') ||
+                           service.type?.toLowerCase().includes('eco') ||
+                           service.name?.toLowerCase().includes('eco') ||
+                           service.type?.toLowerCase().includes('green') ||
+                           service.name?.toLowerCase().includes('green'));
+    return isNatureRelated ? Math.min(baseScore + 20, 100) : baseScore;
+  };
+
+  const ecoScore = calculateEcoScore();
+  const potentialTokens = service.price ? Math.floor(ecoScore * service.price / 100) : 0;
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300">
@@ -40,12 +56,33 @@ export function ServiceCard({ service }: ServiceCardProps) {
             </div>
           </div>
 
-          <div className="flex-grow">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4">
+          <div className="flex-grow space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
               <StarRating rating={service.stats.averageRating} />
               <span className="text-sm text-gray-600">
                 ({service.stats.totalReviews} {service.stats.totalReviews === 1 ? 'review' : 'reviews'})
               </span>
+            </div>
+
+            {/* Eco-score y tokens indicator */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-green-500 rounded-full"
+                    style={{ width: `${ecoScore}%` }}
+                  />
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-xs text-gray-600">Eco-score</span>
+                  <span className="text-xs font-medium text-green-600">{ecoScore}%</span>
+                </div>
+              </div>
+              {potentialTokens > 0 && (
+                <div className="text-green-600 text-sm font-medium whitespace-nowrap">
+                  +{potentialTokens} 🌱
+                </div>
+              )}
             </div>
           </div>
 

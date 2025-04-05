@@ -52,12 +52,9 @@ export default function ServiceDetails() {
     setAddingToCart(true);
 
     try {
-      const totalAmount = (service.price || 0) * bookingData.quantity;
-
-      // Calculate service eco score based on ratings and reviews
-      const ratingScore = (service.stats.averageRating || 0) * 15; // Up to 75 points from ratings
-      const popularityScore = Math.min(((service.stats.totalReviews || 0) / 20) * 25, 25); // Up to 25 points from popularity
-      const ecoScore = Math.min(Math.round(ratingScore + popularityScore), 100);
+      // Convertir el precio de euros a céntimos para el carrito
+      const priceInCents = Math.round(service.price * 100);
+      const totalAmount = priceInCents * bookingData.quantity;
 
       const response = await fetch('/api/cart', {
         method: 'POST',
@@ -74,20 +71,32 @@ export default function ServiceDetails() {
           additionalInfo: {
             serviceName: service.name,
             serviceType: service.type,
-            pricePerUnit: service.price,
-            ecoScore: ecoScore
+            pricePerUnit: priceInCents,
+            // Calculamos el ecoScore base (0-100) usando el rating, y añadimos bonus si es de naturaleza
+            ecoScore: (() => {
+              const baseScore = service.stats?.averageRating ? Math.min(Math.round(service.stats.averageRating * 20), 80) : 60;
+              // Si el tipo o nombre del servicio contiene palabras relacionadas con naturaleza, añadimos bonus
+              const isNatureRelated = (service.type?.toLowerCase().includes('nature') || 
+                                     service.name?.toLowerCase().includes('nature') ||
+                                     service.type?.toLowerCase().includes('eco') ||
+                                     service.name?.toLowerCase().includes('eco') ||
+                                     service.type?.toLowerCase().includes('green') ||
+                                     service.name?.toLowerCase().includes('green'));
+              return isNatureRelated ? Math.min(baseScore + 20, 100) : baseScore;
+            })()
           }
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to add to cart');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add item to cart');
       }
 
       router.push('/checkout');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      alert('Failed to add item to cart. Please try again.');
+      alert(error instanceof Error ? error.message : 'Failed to add item to cart. Please try again.');
     } finally {
       setAddingToCart(false);
     }
