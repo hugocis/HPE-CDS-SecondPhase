@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import PaymentForm from '@/app/components/PaymentForm';
 
 export default function HotelDetails() {
   const params = useParams();
   const [hotel, setHotel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [averageRating, setAverageRating] = useState<number>(0);
+  const [bookingData, setBookingData] = useState({
+    checkIn: '',
+    checkOut: '',
+    guests: 2
+  });
+  const [showPayment, setShowPayment] = useState(false);
+  const [totalNights, setTotalNights] = useState(0);
 
   useEffect(() => {
     async function fetchHotelDetails() {
@@ -35,6 +43,34 @@ export default function HotelDetails() {
     }
   }, [params.id]);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setBookingData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    // Calculate total nights when dates change
+    if (name === 'checkIn' || name === 'checkOut') {
+      const startDate = name === 'checkIn' ? new Date(value) : new Date(bookingData.checkIn);
+      const endDate = name === 'checkOut' ? new Date(value) : new Date(bookingData.checkOut);
+      
+      if (bookingData.checkIn && bookingData.checkOut) {
+        const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        setTotalNights(Math.max(0, nights));
+      }
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bookingData.checkIn || !bookingData.checkOut) {
+      alert('Please select check-in and check-out dates');
+      return;
+    }
+    setShowPayment(true);
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-4 sm:p-8">
@@ -57,6 +93,8 @@ export default function HotelDetails() {
       </div>
     );
   }
+
+  const totalAmount = hotel?.calculatedData?.pricePerNight * totalNights;
 
   return (
     <div className="container mx-auto p-4 sm:p-8">
@@ -104,45 +142,93 @@ export default function HotelDetails() {
           </div>
         </div>
 
-        {/* Formulario de reserva */}
+        {/* Formulario de reserva y pago */}
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Book Your Stay</h2>
-            <form className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Check-in Date</label>
-                <input
-                  type="date"
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                  min={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Check-out Date</label>
-                <input
-                  type="date"
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                  min={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Guests</label>
-                <input
-                  type="number"
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                  min="1"
-                  max="4"
-                  defaultValue="2"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors mt-4"
-              >
-                Confirm Booking
-              </button>
-            </form>
-          </div>
+          {!showPayment ? (
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Book Your Stay</h2>
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Check-in Date</label>
+                  <input
+                    type="date"
+                    name="checkIn"
+                    value={bookingData.checkIn}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                    min={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Check-out Date</label>
+                  <input
+                    type="date"
+                    name="checkOut"
+                    value={bookingData.checkOut}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                    min={bookingData.checkIn || new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Number of Guests</label>
+                  <input
+                    type="number"
+                    name="guests"
+                    value={bookingData.guests}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                    min="1"
+                    max="4"
+                  />
+                </div>
+
+                {totalNights > 0 && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Total nights:</span>
+                      <span className="font-semibold">{totalNights}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-gray-600">Price per night:</span>
+                      <span className="font-semibold">€{hotel.calculatedData.pricePerNight.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2 text-lg font-semibold">
+                      <span>Total amount:</span>
+                      <span>€{totalAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors mt-4"
+                >
+                  Proceed to Payment
+                </button>
+              </form>
+            </div>
+          ) : (
+            <PaymentForm
+              totalAmount={totalAmount}
+              orderType="HOTEL"
+              itemId={Number(params.id)}
+              startDate={bookingData.checkIn}
+              endDate={bookingData.checkOut}
+              quantity={bookingData.guests}
+              additionalInfo={{
+                hotelName: hotel.name,
+                nights: totalNights,
+                pricePerNight: hotel.calculatedData.pricePerNight
+              }}
+              onError={(error) => {
+                alert(error);
+                setShowPayment(false);
+              }}
+            />
+          )}
 
           {/* Reviews summary */}
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
