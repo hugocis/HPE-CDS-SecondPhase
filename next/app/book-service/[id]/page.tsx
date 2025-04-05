@@ -52,11 +52,11 @@ export default function ServiceDetails() {
     setAddingToCart(true);
 
     try {
-      const totalAmount = service.price * bookingData.quantity;
+      const totalAmount = (service.price || 0) * bookingData.quantity;
 
       // Calculate service eco score based on ratings and reviews
-      const ratingScore = service.stats.averageRating * 15; // Up to 75 points from ratings
-      const popularityScore = Math.min((service.stats.totalReviews / 20) * 25, 25); // Up to 25 points from popularity
+      const ratingScore = (service.stats.averageRating || 0) * 15; // Up to 75 points from ratings
+      const popularityScore = Math.min(((service.stats.totalReviews || 0) / 20) * 25, 25); // Up to 25 points from popularity
       const ecoScore = Math.min(Math.round(ratingScore + popularityScore), 100);
 
       const response = await fetch('/api/cart', {
@@ -140,12 +140,14 @@ export default function ServiceDetails() {
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <p className="text-sm text-gray-500">Price</p>
-                  <p className="text-2xl font-bold text-gray-900">€{service.price.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    €{(service.price || 0).toFixed(2)}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <StarRating rating={service.rating} />
+                  <StarRating rating={service.rating || 0} />
                   <p className="text-sm text-gray-500 mt-1">
-                    {service.reviews.length} reviews
+                    {service.reviews?.length || 0} reviews
                   </p>
                 </div>
               </div>
@@ -184,14 +186,14 @@ export default function ServiceDetails() {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Total amount:</span>
                     <span className="text-lg font-semibold">
-                      €{(service.price * bookingData.quantity).toFixed(2)}
+                      €{((service.price || 0) * bookingData.quantity).toFixed(2)}
                     </span>
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={addingToCart}
+                  disabled={addingToCart || !service.price}
                   className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400"
                 >
                   {addingToCart ? 'Adding to Cart...' : 'Add to Cart'}
@@ -202,14 +204,14 @@ export default function ServiceDetails() {
         </div>
 
         {/* Reviews Section */}
-        {service.reviews.length > 0 && (
+        {service.reviews?.length > 0 && (
           <div className="mt-8 bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-6">Reviews</h2>
             <div className="space-y-6">
               {service.reviews.map((review: any) => (
                 <div key={review.id} className="border-b last:border-0 pb-4 last:pb-0">
                   <div className="flex items-center justify-between mb-2">
-                    <StarRating rating={review.rating} />
+                    <StarRating rating={review.rating || 0} />
                     <span className="text-sm text-gray-600">
                       {new Date(review.date).toLocaleDateString()}
                     </span>
