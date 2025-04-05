@@ -33,12 +33,18 @@ interface Vehicle {
   }>;
 }
 
+interface RouteSelection {
+  name: string;
+  averageTravelTime: number;
+}
+
 export default function VehicleDetails() {
   const params = useParams();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [averageRating, setAverageRating] = useState(0);
+  const [selectedRoute, setSelectedRoute] = useState<RouteSelection | null>(null);
 
   useEffect(() => {
     async function fetchVehicleDetails() {
@@ -146,7 +152,17 @@ export default function VehicleDetails() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Popular Routes</h2>
               <div className="space-y-4">
                 {vehicle.popularRoutes.map((route, index) => (
-                  <div key={index} className="border-b last:border-0 pb-3 last:pb-0">
+                  <div 
+                    key={index} 
+                    className={`border-b last:border-0 pb-3 last:pb-0 cursor-pointer transition-colors 
+                      ${selectedRoute?.name === route.name 
+                        ? 'bg-green-50 border-green-200' 
+                        : 'hover:bg-gray-50'}`}
+                    onClick={() => setSelectedRoute({
+                      name: route.name,
+                      averageTravelTime: route.averageTravelTime
+                    })}
+                  >
                     <div className="flex justify-between items-start mb-2">
                       <span className="font-medium text-gray-800">{route.name}</span>
                       <span className="text-sm text-gray-600">
@@ -213,6 +229,20 @@ export default function VehicleDetails() {
           <div className="bg-white rounded-lg shadow-md p-6 sticky top-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Book Your Trip</h2>
             <form className="space-y-4">
+              {selectedRoute && (
+                <div className="p-3 bg-green-50 rounded-lg mb-4">
+                  <h3 className="font-medium text-green-800 mb-1">Selected Route</h3>
+                  <p className="text-sm text-green-700">{selectedRoute.name}</p>
+                  <p className="text-xs text-green-600">Expected duration: {selectedRoute.averageTravelTime} min</p>
+                  <button
+                    type="button"
+                    className="text-xs text-red-600 hover:text-red-700 mt-2"
+                    onClick={() => setSelectedRoute(null)}
+                  >
+                    Remove route
+                  </button>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
                 <input
@@ -235,7 +265,7 @@ export default function VehicleDetails() {
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                   min="1"
                   max="8"
-                  defaultValue="2"
+                  defaultValue={selectedRoute ? Math.ceil(selectedRoute.averageTravelTime / 60) : 2}
                 />
               </div>
               <div>
