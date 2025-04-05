@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+const TOTAL_ROOMS = 100;
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -43,13 +45,26 @@ export async function GET(
     
     let ecoScore = 0;
     if (sustainability) {
-      const recyclingScore = (sustainability.recyclingPercentage / 10) * 40; // Dividir entre 10 para normalizar
-      const energyScore = Math.min(100 - (sustainability.energyConsumptionKwh / 1000) * 10, 40);
-      const wasteScore = Math.min(100 - (sustainability.wasteGeneratedKg / 100) * 20, 20);
-      ecoScore = Math.round(recyclingScore + energyScore + wasteScore);
+      // Normalizar el porcentaje de reciclaje a un máximo de 100%
+      const normalizedRecycling = Math.min(sustainability.recyclingPercentage, 100);
+      
+      // Calcular puntuaciones individuales
+      const recyclingScore = (normalizedRecycling / 100) * 40; // 40% del peso total
+      
+      // Calcular score de energía (menor consumo = mejor score)
+      // Asumimos que 2000 kWh es el máximo razonable
+      const normalizedEnergy = Math.max(0, Math.min(sustainability.energyConsumptionKwh, 2000));
+      const energyScore = ((2000 - normalizedEnergy) / 2000) * 40; // 40% del peso total
+      
+      // Calcular score de residuos (menor cantidad = mejor score)
+      // Asumimos que 2500 kg es el máximo razonable
+      const normalizedWaste = Math.max(0, Math.min(sustainability.wasteGeneratedKg, 2500));
+      const wasteScore = ((2500 - normalizedWaste) / 2500) * 20; // 20% del peso total
+      
+      // Sumar todos los scores y asegurar que está entre 0 y 100
+      ecoScore = Math.max(0, Math.min(100, Math.round(recyclingScore + energyScore + wasteScore)));
     }
 
-    const TOTAL_ROOMS = 100;
     const occupancyRate = occupancy ? occupancy.occupancyRate : 0;
     const availableRooms = Math.round(TOTAL_ROOMS * (100 - occupancyRate) / 100);
 
@@ -64,7 +79,7 @@ export async function GET(
       },
       sustainabilityData: hotel.sustainabilityData.map(data => ({
         ...data,
-        recyclingPercentage: data.recyclingPercentage / 10, // Dividir entre 10 para normalizar el porcentaje
+        recyclingPercentage: Math.min(data.recyclingPercentage, 100), // Limitar a 100%
         energyConsumptionKwh: data.energyConsumptionKwh,
         wasteGeneratedKg: data.wasteGeneratedKg,
       }))

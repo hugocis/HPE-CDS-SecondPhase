@@ -56,26 +56,13 @@ export default function HotelDetails() {
       [type]: date
     }));
 
-    if (type === 'checkIn' && date) {
-      // Si la fecha de checkout es anterior a la nueva fecha de check-in, la reseteamos
-      if (bookingData.checkOut && date > bookingData.checkOut) {
-        setBookingData(prev => ({
-          ...prev,
-          checkOut: null,
-          [type]: date
-        }));
-      }
-    }
-
     // Calcular noches cuando ambas fechas están seleccionadas
-    if (bookingData.checkIn && bookingData.checkOut) {
-      const startDate = type === 'checkIn' ? date : bookingData.checkIn;
-      const endDate = type === 'checkOut' ? date : bookingData.checkOut;
-      
-      if (startDate && endDate) {
-        const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        setTotalNights(Math.max(0, nights));
-      }
+    if (type === 'checkIn' && date && bookingData.checkOut) {
+      const nights = Math.ceil((bookingData.checkOut.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      setTotalNights(Math.max(0, nights));
+    } else if (type === 'checkOut' && date && bookingData.checkIn) {
+      const nights = Math.ceil((date.getTime() - bookingData.checkIn.getTime()) / (1000 * 60 * 60 * 24));
+      setTotalNights(Math.max(0, nights));
     }
   };
 
@@ -95,15 +82,24 @@ export default function HotelDetails() {
       return;
     }
 
-    if (!bookingData.checkIn || !bookingData.checkOut || totalNights <= 0) {
+    if (!bookingData.checkIn || !bookingData.checkOut) {
       alert('Por favor, selecciona fechas válidas de entrada y salida');
+      return;
+    }
+
+    const nights = Math.ceil(
+      (bookingData.checkOut.getTime() - bookingData.checkIn.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    if (nights <= 0) {
+      alert('La fecha de salida debe ser posterior a la fecha de entrada');
       return;
     }
 
     setAddingToCart(true);
 
     try {
-      const totalAmount = hotel.calculatedData.pricePerNight * totalNights;
+      const totalAmount = hotel.calculatedData.pricePerNight * nights;
 
       if (!totalAmount || totalAmount <= 0) {
         throw new Error('Error al calcular el precio total');
@@ -118,11 +114,12 @@ export default function HotelDetails() {
         endDate: bookingData.checkOut.toISOString(),
         additionalInfo: {
           hotelName: hotel.name,
-          nights: totalNights,
+          nights: nights,
           pricePerNight: hotel.calculatedData.pricePerNight,
           guests: bookingData.guests,
           displayStartDate: bookingData.checkIn.toLocaleDateString('es-ES'),
-          displayEndDate: bookingData.checkOut.toLocaleDateString('es-ES')
+          displayEndDate: bookingData.checkOut.toLocaleDateString('es-ES'),
+          ecoScore: hotel.calculatedData.ecoScore // Añadir el ecoScore
         }
       };
 
@@ -212,7 +209,7 @@ export default function HotelDetails() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Recycling Rate</span>
-                <span className="font-semibold text-green-700">{(hotel.sustainabilityData[0].recyclingPercentage * 100).toFixed(1)}%</span>
+                <span className="font-semibold text-green-700">{hotel.sustainabilityData[0].recyclingPercentage}%</span>
               </div>
             </div>
           </div>
