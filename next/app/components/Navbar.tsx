@@ -5,14 +5,15 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
 import Cart from './Cart';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,8 +24,18 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    // Cerrar el menú móvil cuando cambia la ruta
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   const isActivePath = (path: string) => {
     return pathname === path;
+  };
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: '/' });
+    router.push('/');
   };
 
   return (
@@ -42,11 +53,12 @@ export default function Navbar() {
                   width={120}
                   height={40}
                   className="h-8 w-auto transition-transform duration-300 group-hover:scale-105"
+                  priority
                 />
               </Link>
               
               {/* Menú de navegación - Desktop */}
-              {session && (
+              {status === 'authenticated' && (
                 <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                   {['Hotels', 'Routes', 'Services', 'Vehicles'].map((item) => {
                     const path = `/book-${item.toLowerCase()}`;
@@ -71,7 +83,7 @@ export default function Navbar() {
             {/* Botones de acción derecha */}
             <div className="flex items-center space-x-4">
               {/* Carrito - Solo visible cuando el usuario está autenticado */}
-              {session && (
+              {status === 'authenticated' && (
                 <button
                   onClick={() => setIsCartOpen(true)}
                   className="relative p-2 rounded-full text-gray-600 hover:text-green-600 hover:bg-green-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
@@ -94,7 +106,7 @@ export default function Navbar() {
               )}
 
               {/* Menú de usuario */}
-              {session ? (
+              {status === 'authenticated' ? (
                 <div className="hidden sm:flex items-center space-x-4">
                   <Link
                     href="/orders"
@@ -117,7 +129,7 @@ export default function Navbar() {
                     Profile
                   </Link>
                   <button
-                    onClick={() => signOut({ callbackUrl: '/' })}
+                    onClick={handleSignOut}
                     className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
                   >
                     Sign Out
@@ -165,7 +177,7 @@ export default function Navbar() {
         {/* Menú móvil */}
         <div className={`sm:hidden transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'max-h-screen' : 'max-h-0 overflow-hidden'}`}>
           <div className="px-2 pt-2 pb-3 space-y-1 bg-white shadow-lg">
-            {session ? (
+            {status === 'authenticated' ? (
               <>
                 {['Hotels', 'Routes', 'Services', 'Vehicles'].map((item) => {
                   const path = `/book-${item.toLowerCase()}`;
@@ -204,7 +216,7 @@ export default function Navbar() {
                   Profile
                 </Link>
                 <button
-                  onClick={() => signOut({ callbackUrl: '/' })}
+                  onClick={handleSignOut}
                   className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-red-50 transition-colors duration-200"
                 >
                   Sign Out
@@ -231,7 +243,7 @@ export default function Navbar() {
       </nav>
 
       {/* Carrito */}
-      {session && <Cart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />}
+      {status === 'authenticated' && <Cart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />}
     </>
   );
 }
