@@ -2,9 +2,19 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 interface TransportUsage {
+  id: number;
   date: Date;
   userCount: number;
   averageTravelTimeMin: number;
+  popularRouteId: number | null;
+  popularRoute: {
+    id: number;
+    name: string;
+    routeType: string | null;
+    lengthKm: number | null;
+    durationHr: number | null;
+    popularity: number | null;
+  } | null;
 }
 
 export async function GET(
@@ -21,7 +31,10 @@ export async function GET(
           orderBy: {
             date: 'desc'
           },
-          take: 30 // Last 30 records for statistics
+          take: 30,
+          include: {
+            popularRoute: true
+          }
         }
       }
     });
@@ -35,38 +48,74 @@ export async function GET(
 
     const usageData = vehicle.transportUsages;
     
-    // Calculate average travel time
+    // Calculate averages
     const avgTravelTime = usageData.length > 0
-      ? usageData.reduce((acc: number, curr: TransportUsage) => acc + curr.averageTravelTimeMin, 0) / usageData.length
+      ? usageData.reduce((acc: number, curr) => acc + curr.averageTravelTimeMin, 0) / usageData.length
       : 0;
 
-    // Calculate average user count (popularity)
     const avgUserCount = usageData.length > 0
-      ? usageData.reduce((acc: number, curr: TransportUsage) => acc + curr.userCount, 0) / usageData.length
+      ? usageData.reduce((acc: number, curr) => acc + curr.userCount, 0) / usageData.length
       : 0;
 
-    // Calculate eco score based on average travel time and usage
-    const ecoScore = Math.min(
-      Math.round((1 - (avgTravelTime / 120)) * 50 + // Lower travel time is better (max 50 points)
-      (avgUserCount / 1000) * 50) // Higher usage means more shared transportation (max 50 points)
-    , 100);
+    // Get base eco score for vehicle type based on name
+    const baseEcoScore = {
+      'Tranvía': 95,
+      'Bicicleta': 100,
+      'Autobús': 85,
+      'Metro': 90,
+      'Taxi': 50,
+      'Coche Compartido': 65
+    }[vehicle.name] || 60;
 
-    // Get usage trends
-    const usageTrends = usageData.map((usage: TransportUsage) => ({
-      date: usage.date,
-      userCount: usage.userCount,
-      averageTravelTimeMin: usage.averageTravelTimeMin
+    // Adjust bonuses to have less impact
+    // Usage bonus (up to 5 points)
+    const usageBonus = Math.min((avgUserCount / 100) * 2.5, 5);
+    
+    // Time bonus (up to 5 points)
+    const timeBonus = Math.min((1 - (avgTravelTime / 120)) * 5, 5);
+
+    // Final eco score
+    const ecoScore = Math.min(Math.round(baseEcoScore + usageBonus + timeBonus), 100);
+
+    // Get popular routes
+    const routeStats = usageData.reduce((acc: any, usage: TransportUsage) => {
+      const routeName = usage.popularRoute?.name || 'Unknown Route';
+      if (!acc[routeName]) {
+        acc[routeName] = {
+          count: 0,
+          totalUsers: 0,
+          totalTime: 0
+        };
+      }
+      acc[routeName].count++;
+      acc[routeName].totalUsers += usage.userCount;
+      acc[routeName].totalTime += usage.averageTravelTimeMin;
+      return acc;
+    }, {});
+
+    const popularRoutes = Object.entries(routeStats).map(([name, stats]: [string, any]) => ({
+      name,
+      tripCount: stats.count,
+      averageUsers: Math.round(stats.totalUsers / stats.count),
+      averageTravelTime: Math.round(stats.totalTime / stats.count)
     }));
 
+    // Format vehicle data
     const formattedVehicle = {
       id: vehicle.id,
       name: vehicle.name,
       stats: {
         averageTravelTime: Math.round(avgTravelTime),
         averageUserCount: Math.round(avgUserCount),
-        ecoScore
+        ecoScore,
+        baseEcoScore
       },
-      usageTrends
+      popularRoutes: popularRoutes.sort((a, b) => b.tripCount - a.tripCount),
+      usageTrends: usageData.map((usage) => ({
+        date: usage.date,
+        userCount: usage.userCount,
+        averageTravelTimeMin: usage.averageTravelTimeMin
+      }))
     };
 
     return NextResponse.json(formattedVehicle);

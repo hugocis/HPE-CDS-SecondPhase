@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+// Base eco scores for different vehicle types
+const baseEcoScores: { [key: string]: number } = {
+  'Tranvía': 95,
+  'Bicicleta': 100,
+  'Autobús': 85,
+  'Metro': 90,
+  'Taxi': 50,
+  'Coche Compartido': 65
+};
+
 export async function GET() {
   try {
     const vehicles = await prisma.vehicleType.findMany({
@@ -9,7 +19,7 @@ export async function GET() {
           orderBy: {
             date: 'desc'
           },
-          take: 30 // Last 30 records for statistics
+          take: 30
         }
       }
     });
@@ -27,11 +37,17 @@ export async function GET() {
         ? usageData.reduce((acc: number, curr: any) => acc + curr.userCount, 0) / usageData.length
         : 0;
 
-      // Calculate eco score based on average travel time and usage
-      const ecoScore = Math.min(
-        Math.round((1 - (avgTravelTime / 120)) * 50 + // Lower travel time is better (max 50 points)
-        (avgUserCount / 1000) * 50) // Higher usage means more shared transportation (max 50 points)
-      , 100);
+      // Get base eco score for vehicle type
+      const baseEcoScore = baseEcoScores[vehicle.name] || 60;
+
+      // Usage efficiency bonus (up to 5 points)
+      const usageBonus = Math.min((avgUserCount / 100) * 2.5, 5);
+      
+      // Time efficiency bonus (up to 5 points)
+      const timeBonus = Math.min((1 - (avgTravelTime / 120)) * 5, 5);
+
+      // Final eco score
+      const ecoScore = Math.min(Math.round(baseEcoScore + usageBonus + timeBonus), 100);
 
       return {
         id: vehicle.id,
@@ -39,12 +55,16 @@ export async function GET() {
         stats: {
           averageTravelTime: Math.round(avgTravelTime),
           averageUserCount: Math.round(avgUserCount),
-          ecoScore
+          ecoScore,
+          baseEcoScore
         }
       };
     });
 
-    return NextResponse.json(formattedVehicles);
+    // Sort vehicles by eco score
+    const sortedVehicles = formattedVehicles.sort((a, b) => b.stats.ecoScore - a.stats.ecoScore);
+
+    return NextResponse.json(sortedVehicles);
   } catch (error) {
     console.error('Error fetching vehicles:', error);
     return NextResponse.json(
