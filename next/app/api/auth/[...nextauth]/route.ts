@@ -20,41 +20,58 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            throw new Error('Missing credentials');
           }
-        });
 
-        if (!user) {
-          return null;
+          const user = await prisma.user.findUnique({
+            where: {
+              email: credentials.email
+            }
+          });
+
+          if (!user) {
+            throw new Error('InvalidCredentials');
+          }
+
+          const passwordMatch = await bcrypt.compare(credentials.password, user.password);
+
+          if (!passwordMatch) {
+            throw new Error('InvalidCredentials');
+          }
+
+          return {
+            id: user.id.toString(),
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            emailVerified: null
+          };
+        } catch (error) {
+          console.error('Auth error:', error);
+          // Transformar errores internos en mensajes amigables para el usuario
+          if (error instanceof Error) {
+            if (error.message === 'InvalidCredentials') {
+              throw new Error('CredentialsSignin');
+            }
+          }
+          throw error;
         }
-
-        const passwordMatch = await bcrypt.compare(credentials.password, user.password);
-
-        if (!passwordMatch) {
-          return null;
-        }
-
-        return {
-          id: user.id.toString(),
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          emailVerified: null
-        };
       }
     })
   ],
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 días
+    updateAge: 24 * 60 * 60, // 24 horas
+  },
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60, // 30 días
   },
   pages: {
     signIn: "/auth/signin",
+    error: "/auth/error",
   },
   callbacks: {
     async session({ session, token }) {
@@ -71,7 +88,19 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     }
-  }
+  },
+  events: {
+    async signIn({ user }) {
+      // Actualizar último login
+      if (user.id) {
+        await prisma.user.update({
+          where: { id: parseInt(user.id) },
+          data: { lastLogin: new Date() } as any
+        });
+      }
+    },
+  },
+  debug: process.env.NODE_ENV === 'development',
 };
 
 const handler = NextAuth(authOptions);

@@ -1,4 +1,6 @@
 // This is your Prisma schema file
+// Learn more about it at https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,6 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Auth and User models
 model Account {
   id                String  @id @default(cuid())
   userId            Int
@@ -43,6 +46,7 @@ model User {
   role          String    @default("USER")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  lastLogin     DateTime?
   address       String?
   phone         String?
   bio           String?
@@ -51,28 +55,53 @@ model User {
   accounts      Account[]
   sessions      Session[]
   orders        Order[]
+  cart          Cart?
 }
 
-// New model for handling orders and payments
+// Order and Cart models
 model Order {
   id            Int      @id @default(autoincrement())
   userId        Int
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   totalAmount   Float
   discount      Float    @default(0)
-  status        String   @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  status        String   @default("PENDING")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   paymentMethod String?
-  // Polymorphic relation to different service types
-  orderType     String   // HOTEL, ROUTE, SERVICE, VEHICLE
-  itemId        Int      // ID of the booked item
+  orderType     String
+  itemId        Int
   quantity      Int      @default(1)
   bookingDate   DateTime @default(now())
-  // For specific booking details
   startDate     DateTime?
   endDate       DateTime?
   additionalInfo Json?
+}
+
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id            Int      @id @default(autoincrement())
+  cartId        Int
+  cart          Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  itemType      String
+  itemId        Int
+  quantity      Int
+  price         Float
+  startDate     DateTime
+  endDate       DateTime?
+  additionalInfo Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([cartId, itemType, itemId])
 }
 
 // Model for tourist routes
@@ -84,7 +113,7 @@ model Route {
   durationHr       Float?
   popularity       Int?
   // Relations
-  transportUsages  TransportUsage[] 
+  transportUsages  TransportUsage[]
   reviews          Review[]        @relation("RouteReviews")
 }
 

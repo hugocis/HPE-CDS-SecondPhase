@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { StarRating } from '../../book-service/components/StarRating';
-import PaymentForm from '@/app/components/PaymentForm';
 
 interface Route {
   id: number;
@@ -37,15 +37,17 @@ interface Route {
 
 export default function RouteDetails() {
   const params = useParams();
+  const router = useRouter();
+  const { data: session } = useSession();
   const [route, setRoute] = useState<Route | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showPayment, setShowPayment] = useState(false);
   const [bookingData, setBookingData] = useState({
     date: '',
     participants: 1,
     selectedTransport: '',
   });
+  const [addingToCart, setAddingToCart] = useState(false);
 
   useEffect(() => {
     async function fetchRouteDetails() {
@@ -76,21 +78,66 @@ export default function RouteDetails() {
       : `${minutes}m`;
   };
 
-  const handleBookingSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bookingData.date || !bookingData.selectedTransport) {
-      alert('Please select a date and transport option');
-      return;
-    }
-    setShowPayment(true);
-  };
-
   const calculatePrice = () => {
     if (!route || !bookingData.selectedTransport) return 0;
     const basePrice = 30; // Base price per person
     const transport = route.transportUsage.find(t => t.vehicleType === bookingData.selectedTransport);
     const transportMultiplier = transport ? (transport.averageTravelTime / 60) : 1;
     return basePrice * bookingData.participants * transportMultiplier;
+  };
+
+  const handleAddToCart = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
+
+    if (!bookingData.date || !bookingData.selectedTransport) {
+      alert('Please select a date and transport option');
+      return;
+    }
+
+    setAddingToCart(true);
+
+    try {
+      const transport = route?.transportUsage.find(t => t.vehicleType === bookingData.selectedTransport);
+      const basePrice = 30; // Base price per person
+      const transportMultiplier = transport ? (transport.averageTravelTime / 60) : 1;
+      const totalAmount = basePrice * bookingData.participants * transportMultiplier;
+
+      const response = await fetch('/api/cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          itemType: 'ROUTE',
+          itemId: parseInt(params.id as string),
+          quantity: bookingData.participants,
+          price: totalAmount,
+          startDate: bookingData.date,
+          endDate: bookingData.date,
+          additionalInfo: {
+            routeName: route?.name,
+            transportType: bookingData.selectedTransport,
+            duration: route?.details.durationHr
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add to cart');
+      }
+
+      router.push('/checkout');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      alert('Failed to add item to cart. Please try again.');
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   if (loading) {
@@ -192,99 +239,79 @@ export default function RouteDetails() {
           </div>
         </div>
 
-        {/* Booking and Payment Section */}
+        {/* Booking Form */}
         <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-          {!showPayment ? (
-            <>
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Book This Route</h2>
-              <form onSubmit={handleBookingSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Date
-                  </label>
-                  <input
-                    type="date"
-                    value={bookingData.date}
-                    onChange={(e) => setBookingData(prev => ({ ...prev, date: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                    min={new Date().toISOString().split('T')[0]}
-                    required
-                  />
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Book This Route</h2>
+          <form onSubmit={handleAddToCart} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Date
+              </label>
+              <input
+                type="date"
+                value={bookingData.date}
+                onChange={(e) => setBookingData(prev => ({ ...prev, date: e.target.value }))}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                min={new Date().toISOString().split('T')[0]}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Participants
+              </label>
+              <input
+                type="number"
+                value={bookingData.participants}
+                onChange={(e) => setBookingData(prev => ({ ...prev, participants: parseInt(e.target.value) }))}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                min="1"
+                max="10"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Transport Option
+              </label>
+              <select
+                value={bookingData.selectedTransport}
+                onChange={(e) => setBookingData(prev => ({ ...prev, selectedTransport: e.target.value }))}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                required
+              >
+                <option value="">Select transport</option>
+                {route?.transportUsage.map((transport, index) => (
+                  <option key={index} value={transport.vehicleType}>
+                    {transport.vehicleType} ({transport.averageTravelTime} min)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {bookingData.selectedTransport && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Price per person:</span>
+                  <span className="font-semibold">€{(calculatePrice() / bookingData.participants).toFixed(2)}</span>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Number of Participants
-                  </label>
-                  <input
-                    type="number"
-                    value={bookingData.participants}
-                    onChange={(e) => setBookingData(prev => ({ ...prev, participants: parseInt(e.target.value) }))}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                    min="1"
-                    max="10"
-                    required
-                  />
+                <div className="flex justify-between items-center mt-2 text-lg font-semibold">
+                  <span>Total amount:</span>
+                  <span>€{calculatePrice().toFixed(2)}</span>
                 </div>
+              </div>
+            )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Transport Option
-                  </label>
-                  <select
-                    value={bookingData.selectedTransport}
-                    onChange={(e) => setBookingData(prev => ({ ...prev, selectedTransport: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                    required
-                  >
-                    <option value="">Select transport</option>
-                    {route?.transportUsage.map((transport, index) => (
-                      <option key={index} value={transport.vehicleType}>
-                        {transport.vehicleType} ({transport.averageTravelTime} min)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {bookingData.selectedTransport && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Price per person:</span>
-                      <span className="font-semibold">€{(calculatePrice() / bookingData.participants).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-2 text-lg font-semibold">
-                      <span>Total amount:</span>
-                      <span>€{calculatePrice().toFixed(2)}</span>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors text-lg font-semibold"
-                >
-                  Proceed to Payment
-                </button>
-              </form>
-            </>
-          ) : (
-            <PaymentForm
-              totalAmount={calculatePrice()}
-              orderType="ROUTE"
-              itemId={Number(params.id)}
-              startDate={bookingData.date}
-              quantity={bookingData.participants}
-              additionalInfo={{
-                routeName: route?.name,
-                transportType: bookingData.selectedTransport,
-                duration: route?.details.durationHr
-              }}
-              onError={(error) => {
-                alert(error);
-                setShowPayment(false);
-              }}
-            />
-          )}
+            <button
+              type="submit"
+              disabled={addingToCart}
+              className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors disabled:bg-green-400"
+            >
+              {addingToCart ? 'Adding to Cart...' : 'Add to Cart'}
+            </button>
+          </form>
         </div>
 
         {/* Reviews Section */}
