@@ -42,7 +42,10 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return new NextResponse(
+        JSON.stringify({ error: "Unauthorized", code: "AUTH_ERROR" }), 
+        { status: 401 }
+      );
     }
 
     const user = await prisma.user.findUnique({
@@ -52,7 +55,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return new NextResponse("User not found", { status: 404 });
+      return new NextResponse(
+        JSON.stringify({ error: "User not found", code: "USER_ERROR" }), 
+        { status: 404 }
+      );
     }
 
     const body = await request.json();
@@ -68,7 +74,22 @@ export async function POST(request: NextRequest) {
       discount = 0 
     } = body;
 
-    // Crear la orden
+    // Validate required fields
+    if (!totalAmount || !orderType || !itemId) {
+      return new NextResponse(
+        JSON.stringify({ error: "Missing required fields", code: "VALIDATION_ERROR" }), 
+        { status: 400 }
+      );
+    }
+
+    // Enhanced handling for cart items
+    const cartItems = additionalInfo.items || [];
+    const enhancedAdditionalInfo = {
+      ...additionalInfo,
+      items: cartItems.length > 0 ? cartItems : undefined
+    };
+
+    // Create the order
     const order = await prisma.order.create({
       data: {
         userId: user.id,
@@ -79,14 +100,14 @@ export async function POST(request: NextRequest) {
         quantity,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
-        additionalInfo,
+        additionalInfo: enhancedAdditionalInfo,
         paymentMethod,
       }
     });
 
-    // Si se usaron EcoTokens (hay descuento), actualizar el balance
+    // If EcoTokens were used (discount applied), update the user's balance
     if (discount > 0) {
-      const tokensUsed = Math.floor(discount * 10); // 1 token = 0.1 de descuento
+      const tokensUsed = Math.floor(discount * 10); // 1 token = 0.1 discount
       await prisma.user.update({
         where: { id: user.id },
         data: {

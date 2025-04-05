@@ -43,7 +43,7 @@ export default function PaymentForm({
         return;
       }
 
-      // Calcular el descuento con EcoTokens (10% del total)
+      // Calculate discount with EcoTokens (10% of total)
       const discount = useEcoTokens ? totalAmount * 0.1 : 0;
 
       const response = await fetch('/api/orders', {
@@ -65,11 +65,14 @@ export default function PaymentForm({
       });
 
       if (!response.ok) {
-        throw new Error('Payment failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Payment failed');
       }
 
+      // If payment is successful, call the onSuccess callback
       onSuccess?.();
     } catch (error) {
+      console.error('[PAYMENT_ERROR]', error);
       onError?.(error instanceof Error ? error.message : 'Payment failed');
     } finally {
       setLoading(false);

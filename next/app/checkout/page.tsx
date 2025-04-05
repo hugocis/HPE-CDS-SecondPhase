@@ -41,7 +41,15 @@ export default function CheckoutPage() {
 
   const handlePaymentSuccess = async () => {
     try {
-      // Create the order with all items
+      // For handling multiple items, we'll create an order that references the primary item
+      // but stores all items in additionalInfo for tracking
+      if (cartItems.length === 0) {
+        throw new Error('No items in cart');
+      }
+
+      // Use the first item as the primary item for the order
+      const primaryItem = cartItems[0];
+      
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
@@ -49,11 +57,11 @@ export default function CheckoutPage() {
         },
         body: JSON.stringify({
           totalAmount: getTotalAmount(),
-          orderType: cartItems[0]?.itemType || 'MULTIPLE',
-          itemId: cartItems[0]?.itemId || 0,
-          quantity: cartItems[0]?.quantity || 1,
-          startDate: cartItems[0]?.startDate,
-          endDate: cartItems[0]?.endDate,
+          orderType: cartItems.length > 1 ? 'MULTIPLE' : primaryItem.itemType,
+          itemId: primaryItem.itemId,
+          quantity: primaryItem.quantity,
+          startDate: primaryItem.startDate,
+          endDate: primaryItem.endDate,
           additionalInfo: {
             items: cartItems.map(item => ({
               type: item.itemType,
@@ -62,17 +70,24 @@ export default function CheckoutPage() {
               price: item.price,
               startDate: item.startDate,
               endDate: item.endDate,
+              name: item.additionalInfo?.name || 
+                    item.additionalInfo?.hotelName || 
+                    item.additionalInfo?.routeName || 
+                    item.additionalInfo?.serviceName || 
+                    item.additionalInfo?.vehicleName,
               ...item.additionalInfo
             }))
-          }
+          },
+          paymentMethod: 'CARD' // Default payment method
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create order');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create order');
       }
 
-      // Clear the cart
+      // Clear the cart after successful order
       await fetch('/api/cart', {
         method: 'DELETE',
       });
@@ -80,7 +95,7 @@ export default function CheckoutPage() {
       router.push('/orders');
     } catch (error) {
       console.error('Error processing order:', error);
-      setError('Failed to process order');
+      setError(error instanceof Error ? error.message : 'Failed to process order');
     }
   };
 
@@ -132,7 +147,12 @@ export default function CheckoutPage() {
             >
               <div>
                 <p className="font-medium">
-                  {item.additionalInfo?.name || item.additionalInfo?.hotelName || item.additionalInfo?.routeName || item.additionalInfo?.serviceName || item.additionalInfo?.vehicleName || `${item.itemType} #${item.itemId}`}
+                  {item.additionalInfo?.name || 
+                   item.additionalInfo?.hotelName || 
+                   item.additionalInfo?.routeName || 
+                   item.additionalInfo?.serviceName || 
+                   item.additionalInfo?.vehicleName || 
+                   `${item.itemType} #${item.itemId}`}
                 </p>
                 <p className="text-sm text-gray-600">
                   Quantity: {item.quantity}
@@ -162,12 +182,22 @@ export default function CheckoutPage() {
         <h2 className="text-xl font-semibold mb-4">Payment Details</h2>
         <PaymentForm
           totalAmount={getTotalAmount()}
-          orderType={cartItems[0]?.itemType || 'MULTIPLE'}
-          itemId={cartItems[0]?.itemId || 0}
-          startDate={cartItems[0]?.startDate}
-          endDate={cartItems[0]?.endDate}
-          quantity={cartItems[0]?.quantity}
-          additionalInfo={cartItems[0]?.additionalInfo}
+          orderType={cartItems.length > 1 ? 'MULTIPLE' : cartItems[0].itemType}
+          itemId={cartItems[0].itemId}
+          startDate={cartItems[0].startDate}
+          endDate={cartItems[0].endDate}
+          quantity={cartItems[0].quantity}
+          additionalInfo={{
+            items: cartItems.map(item => ({
+              type: item.itemType,
+              itemId: item.itemId,
+              quantity: item.quantity,
+              price: item.price,
+              startDate: item.startDate,
+              endDate: item.endDate,
+              ...item.additionalInfo
+            }))
+          }}
           onSuccess={handlePaymentSuccess}
           onError={(error) => setError(error)}
         />

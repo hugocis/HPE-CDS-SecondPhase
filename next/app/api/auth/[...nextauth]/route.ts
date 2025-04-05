@@ -28,6 +28,13 @@ export const authOptions: NextAuthOptions = {
           const user = await prisma.user.findUnique({
             where: {
               email: credentials.email
+            },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              password: true,
+              role: true
             }
           });
 
@@ -50,7 +57,6 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error('Auth error:', error);
-          // Transformar errores internos en mensajes amigables para el usuario
           if (error instanceof Error) {
             if (error.message === 'InvalidCredentials') {
               throw new Error('CredentialsSignin');
@@ -81,26 +87,30 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.sub = user.id;
         token.role = user.role;
+      }
+      // Only update session if explicitly requested
+      if (trigger === "update") {
+        // You can add custom logic here for session updates
       }
       return token;
     }
   },
   events: {
     async signIn({ user }) {
-      // Actualizar último login
       if (user.id) {
-        await prisma.user.update({
-          where: { id: parseInt(user.id) },
-          data: { lastLogin: new Date() } as any
-        });
+        await prisma.$executeRaw`
+          UPDATE "User" 
+          SET "lastLogin" = NOW() 
+          WHERE id = ${parseInt(user.id)}
+        `;
       }
     },
   },
-  debug: process.env.NODE_ENV === 'development',
+  debug: false,
 };
 
 const handler = NextAuth(authOptions);

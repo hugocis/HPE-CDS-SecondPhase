@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
@@ -8,30 +8,31 @@ import Cart from './Cart';
 import { usePathname, useRouter } from 'next/navigation';
 
 export default function Navbar() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession({
+    required: false
+  });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+  const handleScroll = useCallback(() => {
+    setIsScrolled(window.scrollY > 0);
   }, []);
 
   useEffect(() => {
-    // Cerrar el menú móvil cuando cambia la ruta
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  const isActivePath = (path: string) => {
+  const isActivePath = useCallback((path: string) => {
     return pathname === path;
-  };
+  }, [pathname]);
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/' });
