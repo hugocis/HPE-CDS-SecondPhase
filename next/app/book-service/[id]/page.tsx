@@ -61,6 +61,16 @@ export default function ServiceDetails() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="container mx-auto p-8">
+        <div className="text-center text-red-600">
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!service) {
     return (
       <div className="container mx-auto p-8">
@@ -83,6 +93,7 @@ export default function ServiceDetails() {
                 {service.stats.totalReviews} {service.stats.totalReviews === 1 ? 'review' : 'reviews'}
               </p>
             </div>
+
             <button className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
               Book now
             </button>

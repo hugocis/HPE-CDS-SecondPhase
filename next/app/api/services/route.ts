@@ -1,27 +1,27 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// Función auxiliar para determinar el tipo de servicio basado en el nombre
+// Helper function to determine service type based on name
 function determineServiceType(serviceName: string): string {
   const nameLower = serviceName.toLowerCase();
   
   if (nameLower.includes('atracción') || nameLower.includes('atraccion')) {
-    return 'Atracción';
+    return 'Attraction';
   }
   if (nameLower.includes('museo')) {
-    return 'Museo';
+    return 'Museum';
   }
   if (nameLower.includes('parque')) {
-    return 'Parque';
+    return 'Park';
   }
   if (nameLower.includes('teatro')) {
-    return 'Teatro';
+    return 'Theater';
   }
   if (nameLower.includes('restaurante')) {
-    return 'Restaurante';
+    return 'Restaurant';
   }
   
-  return 'Otros';
+  return 'Others';
 }
 
 export async function GET(request: Request) {
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
         ? service.reviews.reduce((acc, curr) => acc + curr.rating, 0) / service.reviews.length
         : 0;
 
-      // Separar el nombre de la empresa de la actividad
+      // Separate company name from activity
       const parts = service.name.split(" ");
       const companyEndIndex = parts.findIndex(part => 
         part.includes("S.L.") || 
