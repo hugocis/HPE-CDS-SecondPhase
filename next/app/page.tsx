@@ -14,7 +14,7 @@ export default function Home() {
           </p>
         </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
             <h2 className="text-2xl font-semibold text-green-600 mb-4">Book a Hotel</h2>
             <p className="text-gray-600 mb-4">
@@ -45,6 +45,17 @@ export default function Home() {
             <a href="/book-vehicle"
                className="inline-block bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 transition-colors">
               Reserve Vehicle
+            </a>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+            <h2 className="text-2xl font-semibold text-green-600 mb-4">Book Services</h2>
+            <p className="text-gray-600 mb-4">
+              Discover eco-friendly activities, attractions, and services throughout the city.
+            </p>
+            <a href="/book-service"
+               className="inline-block bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 transition-colors">
+              Browse Services
             </a>
           </div>
         </div>

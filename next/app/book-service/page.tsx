@@ -99,7 +99,15 @@ export default function BookService() {
 
   return (
     <div className="container mx-auto p-8">
-      <h1 className="text-4xl font-bold text-green-700 mb-6">Tourist Services</h1>
+      <h1 className="text-4xl font-bold text-green-700 mb-4">Tourist Services</h1>
+      
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <p className="text-gray-600">
+          Browse through our curated selection of environmentally conscious tourist services and activities. From guided 
+          tours and cultural experiences to local attractions and entertainment venues, all our partners are committed 
+          to sustainable practices. Filter by category to find the perfect activity for your eco-friendly visit.
+        </p>
+      </div>
       
       <div className="flex gap-8">
         {/* Sidebar con filtros */}

@@ -121,6 +121,14 @@ export default function BookHotel() {
     <div className="container mx-auto p-8">
       <h1 className="text-3xl font-bold text-green-700 mb-8">Book an Eco-Friendly Hotel</h1>
       
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <p className="text-gray-600">
+          Discover our selection of certified eco-friendly accommodations. Each hotel is evaluated based on its 
+          environmental practices, including energy efficiency, waste management, and recycling programs. Use our 
+          filtering system to find hotels that match your preferences for price and sustainability scores.
+        </p>
+      </div>
+      
       <div className="flex gap-8">
         {/* Sidebar con filtros */}
         <div className="w-1/4">

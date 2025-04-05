@@ -25,12 +25,14 @@ const vehicleIcons: { [key: string]: string } = {
 };
 
 export function VehicleCard({ vehicle }: VehicleCardProps) {
-  const getEcoScoreColor = (score: number) => {
-    if (score >= 90) return 'bg-green-600';
-    if (score >= 75) return 'bg-green-500';
-    if (score >= 60) return 'bg-yellow-500';
-    return 'bg-orange-500';
+  const getEcoScoreColors = (score: number) => {
+    if (score >= 90) return { bg: 'bg-green-600', text: 'text-green-600' };
+    if (score >= 75) return { bg: 'bg-green-500', text: 'text-green-500' };
+    if (score >= 60) return { bg: 'bg-yellow-500', text: 'text-yellow-500' };
+    return { bg: 'bg-orange-500', text: 'text-orange-500' };
   };
+
+  const colors = getEcoScoreColors(vehicle.stats.ecoScore);
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
@@ -47,15 +49,13 @@ export function VehicleCard({ vehicle }: VehicleCardProps) {
                 <span className="text-sm font-medium text-gray-600">Eco Score</span>
                 <div className="text-xs text-gray-500">Base: {vehicle.stats.baseEcoScore}%</div>
               </div>
-              <span className={`text-sm font-semibold px-2 py-1 rounded-full ${
-                getEcoScoreColor(vehicle.stats.ecoScore)
-              } text-white`}>
+              <span className={`text-sm font-semibold px-2 py-1 rounded-full ${colors.bg} text-white`}>
                 {vehicle.stats.ecoScore}%
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
-                className={`${getEcoScoreColor(vehicle.stats.ecoScore)} rounded-full h-2`}
+                className={`${colors.bg} rounded-full h-2`}
                 style={{ width: `${vehicle.stats.ecoScore}%` }}
               />
             </div>

@@ -118,7 +118,14 @@ export default function BookRoute() {
 
   return (
     <div className="container mx-auto p-8">
-      <h1 className="text-3xl font-bold text-green-700 mb-8">Routes</h1>
+      <h1 className="text-3xl font-bold text-green-700 mb-4">Routes</h1>
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <p className="text-gray-600">
+          Explore our eco-friendly tourist routes and travel connections. Choose from simple tourist routes for exploring specific areas, 
+          or plan complete travel experiences with our composite routes that connect multiple destinations. Each route is designed with 
+          sustainability in mind, optimizing for both enjoyment and environmental impact.
+        </p>
+      </div>
 
       <div className="flex flex-col md:flex-row gap-8">
         {/* Sidebar con filtros */}
