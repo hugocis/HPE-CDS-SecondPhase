@@ -35,9 +35,10 @@ export default function Cart({ isOpen, onClose }: CartProps) {
       const response = await fetch('/api/cart');
       if (!response.ok) throw new Error('Failed to fetch cart items');
       const data = await response.json();
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching cart items:', error);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,7 @@ export default function Cart({ isOpen, onClose }: CartProps) {
   };
 
   const getTotalAmount = () => {
-    return items.reduce((total, item) => total + item.price, 0);
+    return items?.reduce((total, item) => total + item.price, 0) || 0;
   };
 
   if (!isOpen) return null;
@@ -92,7 +93,7 @@ export default function Cart({ isOpen, onClose }: CartProps) {
               <div className="flex justify-center items-center h-full">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
               </div>
-            ) : items.length === 0 ? (
+            ) : !items || items.length === 0 ? (
               <p className="text-center text-gray-500">Your cart is empty</p>
             ) : (
               <div className="space-y-4">
@@ -103,7 +104,7 @@ export default function Cart({ isOpen, onClose }: CartProps) {
                   >
                     <div>
                       <p className="font-medium">
-                        {item.additionalInfo.name || `${item.itemType} #${item.itemId}`}
+                        {item.additionalInfo?.name || `${item.itemType} #${item.itemId}`}
                       </p>
                       <p className="text-sm text-gray-600">
                         Quantity: {item.quantity}
@@ -140,7 +141,7 @@ export default function Cart({ isOpen, onClose }: CartProps) {
                 onClose();
                 router.push('/checkout');
               }}
-              disabled={items.length === 0}
+              disabled={!items || items.length === 0}
               className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Proceed to Checkout
