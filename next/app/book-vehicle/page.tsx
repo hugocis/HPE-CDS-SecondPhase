@@ -73,8 +73,7 @@ export default function BookVehicle() {
       <h1 className="text-2xl sm:text-3xl font-bold text-green-700 mb-4">Available Vehicles</h1>
       <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8">
         <p className="text-sm sm:text-base text-gray-600">
-          Choose from our diverse fleet of eco-friendly transportation options. From shared bikes and electric scooters 
-          to public transit and carpooling services, we offer sustainable ways to move around the city. Each vehicle 
+          Choose from our diverse fleet of eco-friendly transportation options. From bikes to public transit and carpooling services, we offer sustainable ways to move around the city. Each vehicle 
           comes with an eco-score that reflects its environmental impact, helping you make environmentally conscious 
           travel choices.
         </p>

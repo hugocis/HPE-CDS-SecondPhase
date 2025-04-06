@@ -17,14 +17,31 @@ interface TransportUsage {
   } | null;
 }
 
+interface VehicleType {
+  id: number;
+  name: string;
+  type: string;
+  description: string;
+  rentalPrice: number | null;
+  availability: boolean;
+  capacity?: number;
+  features?: any;
+  co2EmissionsKg?: number;
+  energyEfficiencyRating?: number;
+  ecoScore?: number;
+  transportUsages?: TransportUsage[];
+}
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const { id } = params;
+    
     const vehicle = await prisma.vehicleType.findUnique({
       where: {
-        id: parseInt(params.id)
+        id: parseInt(id)
       },
       include: {
         transportUsages: {
@@ -46,15 +63,15 @@ export async function GET(
       );
     }
 
-    const usageData = vehicle.transportUsages;
+    const usageData = vehicle.transportUsages || [];
     
     // Calculate averages
     const avgTravelTime = usageData.length > 0
-      ? usageData.reduce((acc: number, curr) => acc + curr.averageTravelTimeMin, 0) / usageData.length
+      ? usageData.reduce((acc: number, curr: TransportUsage) => acc + curr.averageTravelTimeMin, 0) / usageData.length
       : 0;
 
     const avgUserCount = usageData.length > 0
-      ? usageData.reduce((acc: number, curr) => acc + curr.userCount, 0) / usageData.length
+      ? usageData.reduce((acc: number, curr: TransportUsage) => acc + curr.userCount, 0) / usageData.length
       : 0;
 
     // Get base eco score for vehicle type based on name
@@ -104,6 +121,17 @@ export async function GET(
     const formattedVehicle = {
       id: vehicle.id,
       name: vehicle.name,
+      type: vehicle.name, // Using name as type since we don't have a separate type field
+      description: `Vehículo sostenible: ${vehicle.name}`, // Generate description from name
+      rentalPrice: 0, // Default rental price
+      availability: true, // Default availability
+      capacity: 4, // Default capacity
+      features: [], // Default empty features
+      environmentalImpact: {
+        co2EmissionsKg: 0,
+        energyEfficiencyRating: 0,
+        ecoScore: ecoScore // Using the calculated ecoScore
+      },
       stats: {
         averageTravelTime: Math.round(avgTravelTime),
         averageUserCount: Math.round(avgUserCount),
@@ -111,7 +139,7 @@ export async function GET(
         baseEcoScore
       },
       popularRoutes: popularRoutes.sort((a, b) => b.tripCount - a.tripCount),
-      usageTrends: usageData.map((usage) => ({
+      usageTrends: usageData.map((usage: TransportUsage) => ({
         date: usage.date,
         userCount: usage.userCount,
         averageTravelTimeMin: usage.averageTravelTimeMin

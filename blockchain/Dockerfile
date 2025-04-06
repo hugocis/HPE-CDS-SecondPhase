@@ -10,8 +10,9 @@ WORKDIR /app
 # Copiar package.json y package-lock.json
 COPY package*.json ./
 
-# Instalar dependencias
-RUN npm install
+# Instalar dependencias, incluyendo cors explícitamente
+RUN npm install && \
+    npm install cors express pg ethers@6.7.0
 
 # Copiar el resto de archivos
 COPY . .
@@ -26,6 +27,7 @@ RUN npx hardhat compile
 # Exponer puertos necesarios
 EXPOSE 5050
 EXPOSE 8545
+EXPOSE 3001
 
 # Usar nuestro script de entrada personalizado
 ENTRYPOINT ["./docker-entrypoint.sh"]

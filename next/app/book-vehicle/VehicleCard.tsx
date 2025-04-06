@@ -15,6 +15,15 @@ interface VehicleCardProps {
   };
 }
 
+const vehicleBasePrice: { [key: string]: number } = {
+  'Tranvía': 25,
+  'Bicicleta': 15,
+  'Autobús': 20,
+  'Metro': 22,
+  'Taxi': 35,
+  'Coche Compartido': 30
+};
+
 const vehicleIcons: { [key: string]: string } = {
   'Tranvía': '🚊',
   'Bicicleta': '🚲',
@@ -32,14 +41,28 @@ export function VehicleCard({ vehicle }: VehicleCardProps) {
     return { bg: 'bg-orange-500', text: 'text-orange-500' };
   };
 
+  const calculatePrice = (basePriceObj: { [key: string]: number }, vehicleName: string, ecoScore: number) => {
+    const basePrice = basePriceObj[vehicleName] || 25;
+    // Apply a small discount for high eco-score vehicles (up to 15% off)
+    const discount = (ecoScore / 100) * 0.15;
+    return (basePrice * (1 - discount)).toFixed(2);
+  };
+
+  const price = calculatePrice(vehicleBasePrice, vehicle.name, vehicle.stats.ecoScore);
   const colors = getEcoScoreColors(vehicle.stats.ecoScore);
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       <div className="p-4 sm:p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-2xl sm:text-3xl">{vehicleIcons[vehicle.name] || '🚗'}</span>
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-800">{vehicle.name}</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl sm:text-3xl">{vehicleIcons[vehicle.name] || '🚗'}</span>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-800">{vehicle.name}</h3>
+          </div>
+          <div className="text-right">
+            <span className="text-sm text-gray-600">Price</span>
+            <p className="text-lg font-bold text-green-600">{price}€</p>
+          </div>
         </div>
         
         <div className="space-y-4">
