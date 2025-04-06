@@ -71,6 +71,13 @@ contract SimpleStorage {
     }
 
     // Main functions
+    function store(uint256 value, address to) public onlyAdminOrOwner whenNotPaused {
+        uint256 oldValue = balances[to];
+        balances[to] += value;
+        emit ValueChanged(to, oldValue, balances[to], value);
+    }
+    
+    // Función original para auto-minteo (mantener compatibilidad)
     function store(uint256 value) public whenNotPaused {
         uint256 oldValue = balances[msg.sender];
         balances[msg.sender] += value;

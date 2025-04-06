@@ -156,19 +156,23 @@ app.post('/api/tokens/mint', async (req, res) => {
     const nonce = await provider.getTransactionCount(adminWallet.address);
     
     try {
-      // Mintear tokens directamente a la dirección especificada
-      const tx = await contractWithSigner.store(amount, {
+      // Mintear tokens directamente a la dirección especificada usando la nueva función
+      const tx = await contractWithSigner.store(amount, address, {
         nonce: nonce,
         gasLimit: 200000 // Asegurar suficiente gas
       });
       
       await tx.wait();
       
+      // Verificar el nuevo balance
+      const newBalance = await simpleStorageContract.balanceOf(address);
+      
       res.json({
         success: true,
         transactionHash: tx.hash,
         amount,
-        address
+        address,
+        newBalance: newBalance.toString()
       });
     } catch (txError) {
       console.error('Error en la transacción:', txError);
@@ -180,18 +184,22 @@ app.post('/api/tokens/mint', async (req, res) => {
         
         // Reintentar con un nuevo nonce
         const newNonce = await provider.getTransactionCount(adminWallet.address);
-        const tx = await contractWithSigner.store(amount, {
+        const tx = await contractWithSigner.store(amount, address, {
           nonce: newNonce,
           gasLimit: 200000
         });
         
         await tx.wait();
         
+        // Verificar el nuevo balance después del reintento
+        const newBalance = await simpleStorageContract.balanceOf(address);
+        
         res.json({
           success: true,
           transactionHash: tx.hash,
           amount,
           address,
+          newBalance: newBalance.toString(),
           recovered: true
         });
       } else {
