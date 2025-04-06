@@ -3,14 +3,23 @@ import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
-    // Redirigir a /auth/signin con el callbackUrl
-    const isAuthenticated = !!req.nextauth.token;
-    if (!isAuthenticated) {
+    const token = req.nextauth.token;
+    
+    // Si no hay token, redirigir al login
+    if (!token) {
       const signInUrl = new URL('/auth/signin', req.url);
       signInUrl.searchParams.set('callbackUrl', req.url);
       return NextResponse.redirect(signInUrl);
     }
-    return NextResponse.next();
+
+    // Cache-Control para rutas autenticadas
+    const response = NextResponse.next();
+    response.headers.set(
+      'Cache-Control',
+      'public, s-maxage=60, stale-while-revalidate=300'
+    );
+    
+    return response;
   },
   {
     callbacks: {
@@ -19,6 +28,7 @@ export default withAuth(
   }
 );
 
+// Proteger más rutas que requieran autenticación
 export const config = {
   matcher: [
     "/profile/:path*",
@@ -28,5 +38,10 @@ export const config = {
     "/book-vehicle/:path*",
     "/orders/:path*",
     "/checkout/:path*",
+    "/api/cart/:path*",
+    "/api/orders/:path*",
+    "/api/users/:path*",
+    "/api/rewards/:path*",
+    "/rewards/:path*"
   ],
 };

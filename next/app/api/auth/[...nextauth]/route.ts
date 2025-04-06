@@ -12,6 +12,11 @@ if (!process.env.NEXTAUTH_SECRET) {
 export const authOptions: NextAuthOptions = {
   adapter: CustomPrismaAdapter(),
   secret: process.env.NEXTAUTH_SECRET,
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 días
+    updateAge: 24 * 60 * 60, // 24 horas
+  },
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -38,13 +43,7 @@ export const authOptions: NextAuthOptions = {
             }
           });
 
-          if (!user) {
-            throw new Error('InvalidCredentials');
-          }
-
-          const passwordMatch = await bcrypt.compare(credentials.password, user.password);
-
-          if (!passwordMatch) {
+          if (!user || !user.password || !(await bcrypt.compare(credentials.password, user.password))) {
             throw new Error('InvalidCredentials');
           }
 
@@ -57,24 +56,11 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error('Auth error:', error);
-          if (error instanceof Error) {
-            if (error.message === 'InvalidCredentials') {
-              throw new Error('CredentialsSignin');
-            }
-          }
-          throw error;
+          throw new Error('CredentialsSignin');
         }
       }
     })
   ],
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 días
-    updateAge: 24 * 60 * 60, // 24 horas
-  },
-  jwt: {
-    maxAge: 30 * 24 * 60 * 60, // 30 días
-  },
   pages: {
     signIn: "/auth/signin",
     error: "/auth/error",
@@ -87,14 +73,10 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user }) {
       if (user) {
         token.sub = user.id;
         token.role = user.role;
-      }
-      // Only update session if explicitly requested
-      if (trigger === "update") {
-        // You can add custom logic here for session updates
       }
       return token;
     }
