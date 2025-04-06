@@ -2,7 +2,7 @@
 
 ## 🎥 Demo del Proyecto
 
-[![Ver demo de EcoToken](https://i.imgur.com/YfOdJvD.png)](https://drive.google.com/file/d/1ROZjlSTtQHTC5BV8-Uh0SgzVis1bESbV/view?usp=sharing)
+[![Ver demo de EcoToken](https://github.com/hugocis/HPE-CDS-SecondPhase/blob/master/DEMO.png)](https://drive.google.com/file/d/1ROZjlSTtQHTC5BV8-Uh0SgzVis1bESbV/view?usp=sharing)
 
 ## 📋 Descripción General
 EcoToken es una plataforma integral que combina blockchain, análisis de datos turísticos y una interfaz web moderna para promover el turismo sostenible. El proyecto está compuesto por tres componentes principales:
