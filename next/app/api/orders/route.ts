@@ -51,102 +51,82 @@ export async function GET(request: NextRequest) {
 }
 
 // Create a new order
-export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.email) {
-    return new NextResponse(
-      JSON.stringify({ error: "Unauthorized", code: "AUTH_ERROR" }), 
-      { status: 401 }
-    );
-  }
-
-  const user = await prisma.user.findUnique({
-    where: {
-      email: session.user.email,
-    },
-  });
-
-  if (!user) {
-    return new NextResponse(
-      JSON.stringify({ error: "User not found", code: "USER_ERROR" }), 
-      { status: 404 }
-    );
-  }
-
+export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { 
-      totalAmount, 
-      orderType, 
-      itemId, 
-      quantity = 1,
-      startDate,
-      endDate,
-      additionalInfo = {},
-      paymentMethod = 'CARD'
-    } = body;
-
-    // Validate required fields
-    if (!totalAmount || !orderType || !itemId) {
-      return new NextResponse(
-        JSON.stringify({ error: "Missing required fields", code: "VALIDATION_ERROR" }), 
-        { status: 400 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    // Enhanced handling for cart items
-    const cartItems = additionalInfo.items || [];
-    const enhancedAdditionalInfo = {
-      ...additionalInfo,
-      items: cartItems.length > 0 ? cartItems : undefined
-    };
-
-    // Check if there's already a pending order with the same details
-    const existingOrder = await prisma.order.findFirst({
-      where: {
-        userId: user.id,
-        orderType,
-        itemId,
-        totalAmount,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
-        status: 'PENDING',
-        createdAt: {
-          gte: new Date(Date.now() - 5 * 60 * 1000) // Orders created in the last 5 minutes
-        }
-      }
+    const data = await request.json();
+    
+    // Obtener el usuario y verificar/crear wallet
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
     });
 
-    if (existingOrder) {
-      return NextResponse.json(existingOrder);
+    if (!user) {
+      return new NextResponse('User not found', { status: 404 });
     }
 
-    // Create the order
+    // Si el usuario no tiene wallet, crear una
+    if (!user.walletAddress) {
+      const walletResponse = await fetch('http://localhost:3001/api/users/create-wallet', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: user.email,
+        }),
+      });
+
+      if (!walletResponse.ok) {
+        console.error('Failed to create wallet');
+        const error = await walletResponse.text();
+        console.error('Wallet creation error:', error);
+      }
+    }
+
+    // Crear la orden
     const order = await prisma.order.create({
       data: {
         userId: user.id,
-        totalAmount,
-        orderType,
-        itemId,
-        quantity,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
-        additionalInfo: enhancedAdditionalInfo,
-        paymentMethod,
-        status: 'COMPLETED' // Set as completed since we don't have real payment processing yet
-      }
+        totalAmount: data.totalAmount,
+        orderType: data.orderType,
+        itemId: data.itemId,
+        quantity: data.quantity || 1,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        additionalInfo: data.additionalInfo,
+        paymentMethod: data.paymentMethod,
+      },
     });
+
+    // Calcular y mintear EcoTokens (por ejemplo, 1 token por cada 10€ gastados)
+    if (user.walletAddress) {
+      const tokensToMint = Math.floor(data.totalAmount / 10);
+      if (tokensToMint > 0) {
+        try {
+          await fetch('http://localhost:3001/api/tokens/mint', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              address: user.walletAddress,
+              amount: tokensToMint,
+            }),
+          });
+        } catch (error) {
+          console.error('Error minting tokens:', error);
+        }
+      }
+    }
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error("[ORDERS_POST]", error);
-    return new NextResponse(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : "An unexpected error occurred",
-        code: "INTERNAL_ERROR" 
-      }), 
-      { status: 500 }
-    );
+    console.error('Error creating order:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

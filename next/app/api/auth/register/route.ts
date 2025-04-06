@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import crypto from 'crypto';
 
 const validatePassword = (password: string) => {
   if (password.length < 8) {
@@ -84,15 +85,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generar un ID único para el usuario
+    const userId = crypto.randomUUID();
+
     // Hash password y crear usuario
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
       data: {
+        id: userId,
         email,
         name,
         password: hashedPassword,
         role: 'USER',
+        lastLogin: new Date(),
         cart: {
           create: {} // Crear carrito vacío para el usuario
         }
@@ -118,7 +124,7 @@ export async function POST(request: NextRequest) {
         message: "An error occurred during registration",
         code: "INTERNAL_ERROR" 
       }), 
-      { status: 500 }
+        { status: 500 }
     );
   }
 }

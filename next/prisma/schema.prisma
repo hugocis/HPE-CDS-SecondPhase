@@ -13,7 +13,7 @@ datasource db {
 // Auth and User models
 model Account {
   id                String  @id @default(cuid())
-  userId            Int
+  userId            String  // Changed from Int to String
   type              String
   provider          String
   providerAccountId String
@@ -33,35 +33,35 @@ model Account {
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
-  userId       Int
+  userId       String   // Changed from Int to String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User {
-  id            Int       @id @default(autoincrement())
-  email         String    @unique
-  name          String
-  password      String
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  password      String?
   role          String    @default("USER")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
   lastLogin     DateTime?
-  address       String?
   phone         String?
-  bio           String?
-  avatarUrl     String?
-  ecoTokens     Int       @default(0)
+  address       String?
+  walletAddress String?   @unique
+  privateKey    String?
   accounts      Account[]
   sessions      Session[]
   orders        Order[]
   cart          Cart?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 // Cart and Order models
 model Cart {
   id        Int        @id @default(autoincrement())
-  userId    Int        @unique
+  userId    String     @unique // Added @unique here
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     CartItem[]
   createdAt DateTime   @default(now())
@@ -87,7 +87,7 @@ model CartItem {
 
 model Order {
   id            Int         @id @default(autoincrement())
-  userId        Int
+  userId        String      // Changed from Int to String
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   totalAmount   Float
   discount      Float       @default(0)

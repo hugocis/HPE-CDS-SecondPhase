@@ -21,8 +21,9 @@ export async function GET() {
         email: true,
         phone: true,
         address: true,
-        bio: true,
-        ecoTokens: true,
+        walletAddress: true,
+        privateKey: true,
+        createdAt: true,
       },
     });
 
@@ -30,7 +31,24 @@ export async function GET() {
       return new NextResponse("User not found", { status: 404 });
     }
 
-    return NextResponse.json(user);
+    // Si el usuario tiene una wallet, obtenemos su balance
+    let balance = "0";
+    if (user.walletAddress) {
+      try {
+        const response = await fetch(`http://localhost:3001/api/tokens/balance/${user.walletAddress}`);
+        if (response.ok) {
+          const data = await response.json();
+          balance = data.balance;
+        }
+      } catch (error) {
+        console.error("Error fetching balance:", error);
+      }
+    }
+
+    return NextResponse.json({
+      ...user,
+      balance,
+    });
   } catch (error) {
     console.error("[USER_GET]", error);
     return new NextResponse("Internal error", { status: 500 });
@@ -56,7 +74,6 @@ export async function PUT(request: NextRequest) {
         name,
         phone,
         address,
-        bio,
       },
     });
 

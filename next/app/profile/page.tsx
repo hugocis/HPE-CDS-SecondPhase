@@ -9,7 +9,8 @@ interface UserProfile {
   email: string;
   phone: string | null;
   address: string | null;
-  ecoTokens: number;
+  walletAddress: string | null;
+  privateKey: string | null;
   createdAt: string;
 }
 
@@ -23,12 +24,18 @@ export default function Profile() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferTo, setTransferTo] = useState('');
+  const [transferError, setTransferError] = useState('');
+  const [transferSuccess, setTransferSuccess] = useState('');
+  const [balance, setBalance] = useState('0');
   const [userData, setUserData] = useState<UserProfile>({
     name: '',
     email: '',
     phone: null,
     address: null,
-    ecoTokens: 0,
+    walletAddress: null,
+    privateKey: null,
     createdAt: new Date().toISOString()
   });
   const [orderSummary, setOrderSummary] = useState<OrderSummary>({
@@ -42,8 +49,11 @@ export default function Profile() {
       router.push('/auth/signin');
     } else if (session?.user?.email) {
       fetchUserData();
+      if (userData.walletAddress) {
+        fetchWalletBalance();
+      }
     }
-  }, [session, status]);
+  }, [session, status, userData.walletAddress]);
 
   const fetchUserData = async () => {
     try {
@@ -66,6 +76,81 @@ export default function Profile() {
       setOrderSummary(summary);
     } catch (error) {
       console.error('Error fetching user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchWalletBalance = async () => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/tokens/balance/${userData.walletAddress}`);
+      const data = await response.json();
+      setBalance(data.balance);
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+    }
+  };
+
+  const createWallet = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:3001/api/users/create-wallet', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: userData.email,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUserData({
+          ...userData,
+          walletAddress: data.address,
+          privateKey: data.privateKey,
+        });
+        await fetchWalletBalance();
+      }
+    } catch (error) {
+      console.error('Error creating wallet:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTransferTokens = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTransferError('');
+    setTransferSuccess('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/tokens/transfer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: userData.walletAddress,
+          to: transferTo,
+          amount: parseInt(transferAmount),
+          privateKey: userData.privateKey,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setTransferSuccess('Tokens transferred successfully!');
+        setTransferAmount('');
+        setTransferTo('');
+        await fetchWalletBalance();
+      } else {
+        throw new Error(data.error || 'Failed to transfer tokens');
+      }
+    } catch (error) {
+      setTransferError(error instanceof Error ? error.message : 'Failed to transfer tokens');
     } finally {
       setLoading(false);
     }
@@ -128,11 +213,11 @@ export default function Profile() {
 
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* EcoTokens Card */}
+              {/* Balance Card */}
               <div className="bg-gradient-to-br from-green-400 to-green-600 rounded-lg p-6 text-white">
-                <h2 className="text-lg font-medium mb-2">EcoTokens Balance</h2>
+                <h2 className="text-lg font-medium mb-2">Wallet Balance</h2>
                 <div className="flex items-baseline">
-                  <span className="text-3xl font-bold">{userData.ecoTokens}</span>
+                  <span className="text-3xl font-bold">{balance}</span>
                   <span className="ml-2 text-green-100">tokens</span>
                 </div>
               </div>
@@ -229,6 +314,91 @@ export default function Profile() {
               </button>
             </div>
           </form>
+        </div>
+
+        {/* Wallet Section */}
+        <div className="bg-white shadow-sm rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Blockchain Wallet</h2>
+          
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Wallet Address
+              </label>
+              {!userData.walletAddress && (
+                <button
+                  onClick={createWallet}
+                  disabled={loading}
+                  className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                >
+                  Create Wallet
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              value={userData.walletAddress || 'No wallet connected'}
+              disabled
+              className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-600"
+            />
+            {userData.walletAddress && (
+              <p className="mt-2 text-sm text-gray-600">
+                Balance: {balance} EcoTokens
+              </p>
+            )}
+          </div>
+
+          {userData.walletAddress && (
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Transfer Tokens</h3>
+              <form onSubmit={handleTransferTokens} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Recipient Address
+                  </label>
+                  <input
+                    type="text"
+                    value={transferTo}
+                    onChange={(e) => setTransferTo(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                    placeholder="Enter recipient's wallet address"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Amount
+                  </label>
+                  <input
+                    type="number"
+                    value={transferAmount}
+                    onChange={(e) => setTransferAmount(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                    placeholder="Enter amount to transfer"
+                    min="1"
+                    required
+                  />
+                </div>
+
+                {transferError && (
+                  <div className="text-red-600 text-sm">{transferError}</div>
+                )}
+                
+                {transferSuccess && (
+                  <div className="text-green-600 text-sm">{transferSuccess}</div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-colors"
+                >
+                  {loading ? 'Processing...' : 'Transfer Tokens'}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* Account Information */}

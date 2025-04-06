@@ -159,6 +159,214 @@ npm test
 2. Las pruebas se ejecutan automáticamente
 3. Los cambios se reflejan sin necesidad de reconstruir
 
+## API REST Documentation
+
+### Base Configuration
+- Base URL: `http://localhost:3001/api`
+- Response Format: JSON
+- CORS: Enabled
+
+### Endpoints
+
+#### Health Check
+```http
+GET /api/health
+```
+Response:
+```json
+{
+    "status": "ok",
+    "blockchain": {
+        "connected": boolean,
+        "simpleStorageAddress": string | null,
+        "userRegistryAddress": string | null
+    }
+}
+```
+
+#### Token Management
+
+1. **Get Token Balance**
+```http
+GET /api/tokens/balance/:address
+```
+Response:
+```json
+{
+    "address": string,
+    "balance": string
+}
+```
+
+2. **Mint Tokens**
+```http
+POST /api/tokens/mint
+```
+Request Body:
+```json
+{
+    "address": string,
+    "amount": number
+}
+```
+Response:
+```json
+{
+    "success": boolean,
+    "transactionHash": string,
+    "amount": number,
+    "address": string
+}
+```
+
+3. **Transfer Tokens**
+```http
+POST /api/tokens/transfer
+```
+Request Body:
+```json
+{
+    "from": string,
+    "to": string,
+    "amount": number,
+    "privateKey": string
+}
+```
+Response:
+```json
+{
+    "success": boolean,
+    "transactionHash": string,
+    "from": string,
+    "to": string,
+    "amount": number
+}
+```
+
+4. **Burn Tokens**
+```http
+POST /api/tokens/burn
+```
+Request Body:
+```json
+{
+    "address": string,
+    "amount": number,
+    "privateKey": string
+}
+```
+Response:
+```json
+{
+    "success": boolean,
+    "transactionHash": string,
+    "address": string,
+    "amount": number
+}
+```
+
+#### User Management
+
+1. **Create New Wallet**
+```http
+POST /api/users/create-wallet
+```
+Request Body:
+```json
+{
+    "username": string
+}
+```
+Response:
+```json
+{
+    "success": boolean,
+    "transactionHash": string,
+    "username": string,
+    "address": string,
+    "privateKey": string
+}
+```
+
+2. **Register User with Existing Wallet**
+```http
+POST /api/users/register
+```
+Request Body:
+```json
+{
+    "username": string,
+    "privateKey": string
+}
+```
+Response:
+```json
+{
+    "success": boolean,
+    "transactionHash": string,
+    "username": string,
+    "address": string
+}
+```
+
+3. **Get User Details**
+```http
+GET /api/users/:address
+```
+Response:
+```json
+{
+    "address": string,
+    "username": string,
+    "registrationDate": string,
+    "isGeneratedWallet": boolean,
+    "linkedWallet": string
+}
+```
+
+4. **Update Username**
+```http
+PUT /api/users/update-username
+```
+Request Body:
+```json
+{
+    "address": string,
+    "newUsername": string,
+    "privateKey": string
+}
+```
+Response:
+```json
+{
+    "success": boolean,
+    "transactionHash": string,
+    "address": string,
+    "newUsername": string
+}
+```
+
+### Error Handling
+All endpoints use consistent error format:
+```json
+{
+    "error": string
+}
+```
+
+HTTP Status Codes:
+- 200: Success
+- 400: Client Request Error
+- 404: Resource Not Found
+- 500: Server Error
+
+### Important Notes
+1. All state-modifying transactions (mint, burn, transfer) require blockchain confirmation
+2. Private keys should be handled securely
+3. Balances and amounts are returned as strings for precision
+4. Requires Hardhat node running on port 8545
+5. Contracts must be deployed and addresses saved in contract-addresses.json
+
 ## Contribuir
 
 1. Fork el repositorio
