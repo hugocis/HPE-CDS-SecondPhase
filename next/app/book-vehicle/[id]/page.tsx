@@ -3,6 +3,26 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { RouteSelector } from '../components/RouteSelector';
+
+interface Route {
+  id: number;
+  name: string;
+  type: string;
+  routeClass: 'simple' | 'composite';
+  details: {
+    lengthKm: number | null;
+    durationHr: number | null;
+    popularity: number;
+  };
+}
+
+interface BookingData {
+  startDate: string;
+  endDate: string;
+  quantity: number;
+  selectedRoute: Route | null;
+}
 
 export default function VehicleDetails() {
   const params = useParams();
@@ -10,10 +30,11 @@ export default function VehicleDetails() {
   const { data: session } = useSession();
   const [vehicle, setVehicle] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [bookingData, setBookingData] = useState({
+  const [bookingData, setBookingData] = useState<BookingData>({
     startDate: '',
     endDate: '',
-    quantity: 1
+    quantity: 1,
+    selectedRoute: null
   });
   const [totalDays, setTotalDays] = useState(0);
   const [addingToCart, setAddingToCart] = useState(false);
@@ -56,6 +77,13 @@ export default function VehicleDetails() {
     }
   };
 
+  const handleRouteSelect = (route: Route | null) => {
+    setBookingData(prev => ({
+      ...prev,
+      selectedRoute: route
+    }));
+  };
+
   const handleAddToCart = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -95,7 +123,14 @@ export default function VehicleDetails() {
             vehicleType: vehicle.type,
             pricePerDay: vehicle.rentalPrice,
             days: totalDays,
-            ecoScore: vehicle.environmentalImpact.ecoScore
+            ecoScore: vehicle.environmentalImpact.ecoScore,
+            selectedRoute: bookingData.selectedRoute ? {
+              id: bookingData.selectedRoute.id,
+              name: bookingData.selectedRoute.name,
+              type: bookingData.selectedRoute.type,
+              routeClass: bookingData.selectedRoute.routeClass,
+              details: bookingData.selectedRoute.details
+            } : null
           }
         }),
       });
@@ -218,6 +253,8 @@ export default function VehicleDetails() {
                     />
                   </div>
 
+                  <RouteSelector onRouteSelect={handleRouteSelect} />
+
                   {totalDays > 0 && (
                     <div className="mt-4 p-4 bg-gray-50 rounded-md">
                       <div className="flex justify-between items-center">
@@ -232,6 +269,12 @@ export default function VehicleDetails() {
                         <span className="text-gray-600">Number of vehicles:</span>
                         <span className="font-semibold">{bookingData.quantity}</span>
                       </div>
+                      {bookingData.selectedRoute && (
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="text-gray-600">Selected Route:</span>
+                          <span className="font-semibold">{bookingData.selectedRoute.name}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center mt-2 text-lg font-semibold">
                         <span>Total amount:</span>
                         <span>€{(vehicle.rentalPrice * totalDays * bookingData.quantity).toFixed(2)}</span>
