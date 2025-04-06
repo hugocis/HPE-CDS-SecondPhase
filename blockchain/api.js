@@ -152,19 +152,59 @@ app.post('/api/tokens/mint', async (req, res) => {
     // Conectar el contrato con la wallet de admin
     const contractWithSigner = simpleStorageContract.connect(adminWallet);
     
-    // Mintear tokens para el usuario (usando una tx del admin)
-    const tx = await contractWithSigner.store(amount);
-    const receipt = await tx.wait();
+    // Obtener el nonce actual
+    const nonce = await provider.getTransactionCount(adminWallet.address);
     
-    res.json({
-      success: true,
-      transactionHash: tx.hash,
-      amount,
-      address
-    });
+    try {
+      // Mintear tokens directamente a la dirección especificada
+      const tx = await contractWithSigner.store(amount, {
+        nonce: nonce,
+        gasLimit: 200000 // Asegurar suficiente gas
+      });
+      
+      await tx.wait();
+      
+      res.json({
+        success: true,
+        transactionHash: tx.hash,
+        amount,
+        address
+      });
+    } catch (txError) {
+      console.error('Error en la transacción:', txError);
+      
+      // Si hay un error con el nonce, intentar recuperar
+      if (txError.code === 'NONCE_EXPIRED' || txError.message?.includes('nonce')) {
+        // Esperar un momento para que la red se sincronice
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Reintentar con un nuevo nonce
+        const newNonce = await provider.getTransactionCount(adminWallet.address);
+        const tx = await contractWithSigner.store(amount, {
+          nonce: newNonce,
+          gasLimit: 200000
+        });
+        
+        await tx.wait();
+        
+        res.json({
+          success: true,
+          transactionHash: tx.hash,
+          amount,
+          address,
+          recovered: true
+        });
+      } else {
+        throw txError;
+      }
+    }
   } catch (error) {
     console.error('Error al mintear tokens:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: error.message,
+      code: error.code,
+      details: error.info?.error?.message || error.shortMessage
+    });
   }
 });
 

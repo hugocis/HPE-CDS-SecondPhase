@@ -17,6 +17,8 @@ services:
     environment:
       - NODE_ENV=development
       - HARDHAT_NETWORK=localhost
+      # Esta es la clave privada de la primera cuenta de Hardhat (account #0)
+      - ADMIN_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:5050"]
       interval: 30s

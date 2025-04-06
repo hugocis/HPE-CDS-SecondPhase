@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validar email
+    // Validar email y contraseña
     const emailValidation = validateEmail(email);
     if (!emailValidation.isValid) {
       return new NextResponse(
@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validar contraseña
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.isValid) {
       return new NextResponse(
@@ -85,10 +84,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Crear wallet para el usuario
+    const walletResponse = await fetch('http://localhost:3001/api/users/create-wallet', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: email,
+      }),
+    });
+
+    if (!walletResponse.ok) {
+      console.error('Failed to create wallet');
+      const error = await walletResponse.text();
+      throw new Error(`Wallet creation failed: ${error}`);
+    }
+
+    const walletData = await walletResponse.json();
+
     // Generar un ID único para el usuario
     const userId = crypto.randomUUID();
 
-    // Hash password y crear usuario
+    // Hash password y crear usuario con la wallet
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
@@ -99,6 +117,8 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         role: 'USER',
         lastLogin: new Date(),
+        walletAddress: walletData.address,
+        privateKey: walletData.privateKey,
         cart: {
           create: {} // Crear carrito vacío para el usuario
         }
@@ -108,7 +128,8 @@ export async function POST(request: NextRequest) {
         name: true,
         email: true,
         role: true,
-        createdAt: true
+        createdAt: true,
+        walletAddress: true
       }
     });
 
@@ -121,10 +142,10 @@ export async function POST(request: NextRequest) {
     console.error("[REGISTER_POST]", error);
     return new NextResponse(
       JSON.stringify({ 
-        message: "An error occurred during registration",
+        message: error instanceof Error ? error.message : "An error occurred during registration",
         code: "INTERNAL_ERROR" 
       }), 
-        { status: 500 }
+      { status: 500 }
     );
   }
 }
