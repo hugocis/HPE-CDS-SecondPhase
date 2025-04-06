@@ -83,9 +83,10 @@ export default function CheckoutPage() {
               type: item.itemType,
               itemId: item.itemId,
               quantity: item.quantity,
-              price: item.price,
+              price: item.price, // Este es el precio total del item
               startDate: item.startDate,
               endDate: item.endDate,
+              ecoScore: item.additionalInfo?.ecoScore || 0,
               name: item.additionalInfo?.name || 
                     item.additionalInfo?.hotelName || 
                     item.additionalInfo?.routeName || 

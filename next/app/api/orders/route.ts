@@ -62,6 +62,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
+    console.log('Received order data:', JSON.stringify(data, null, 2));
     
     // Obtener el usuario y verificar wallet
     const user = await prisma.user.findUnique({
@@ -74,6 +75,8 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
+
+    console.log('User wallet address:', user.walletAddress);
 
     if (!user.walletAddress) {
       return new NextResponse(
@@ -97,29 +100,56 @@ export async function POST(request: Request) {
       },
     });
 
-    // Calcular tokens basados en el monto total y el eco-score
-    const ecoScore = data.additionalInfo?.ecoScore || 0;
-    const tokensToMint = Math.floor((ecoScore * data.totalAmount) / 100);
+    console.log('Created order:', JSON.stringify(order, null, 2));
+
+    // Calcular tokens basados en el eco-score de cada item
+    let tokensToMint = 0;
+    if (data.additionalInfo?.items) {
+      console.log('Calculating tokens for items:', JSON.stringify(data.additionalInfo.items, null, 2));
+      
+      tokensToMint = data.additionalInfo.items.reduce((total: number, item: any) => {
+        const itemEcoScore = item.ecoScore || 0;
+        const itemPrice = item.price || item.pricePerNight * (item.nights || 1); // Usar el precio total del item o calcularlo
+        const itemTokens = Math.floor((itemEcoScore * itemPrice) / 100);
+        
+        console.log('Token calculation for item:', {
+          name: item.name || item.hotelName,
+          price: itemPrice,
+          ecoScore: itemEcoScore,
+          calculatedTokens: itemTokens
+        });
+        
+        return total + itemTokens;
+      }, 0);
+
+      console.log('Total tokens to mint:', tokensToMint);
+    }
 
     if (tokensToMint > 0) {
       try {
+        const mintBody = {
+          address: user.walletAddress,
+          amount: tokensToMint
+        };
+        console.log('Sending mint request:', JSON.stringify(mintBody, null, 2));
+
         const mintResponse = await fetch('http://localhost:3001/api/tokens/mint', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            address: user.walletAddress,
-            amount: tokensToMint,
-          }),
+          body: JSON.stringify(mintBody),
         });
 
+        const responseText = await mintResponse.text();
+        console.log('Mint API response:', responseText);
+
         if (!mintResponse.ok) {
-          const errorData = await mintResponse.text();
-          console.error('Error minting tokens:', errorData);
-          // No fallamos la orden completa, solo registramos el error
+          console.error('Error minting tokens:', responseText);
         } else {
-          const mintResult = await mintResponse.json();
+          const mintResult = JSON.parse(responseText);
+          console.log('Successful mint result:', JSON.stringify(mintResult, null, 2));
+          
           // Actualizar la orden con la información de los tokens
           await prisma.order.update({
             where: { id: order.id },
@@ -134,7 +164,6 @@ export async function POST(request: Request) {
         }
       } catch (error) {
         console.error('Error during token minting:', error);
-        // No fallamos la orden completa, solo registramos el error
       }
     }
 
