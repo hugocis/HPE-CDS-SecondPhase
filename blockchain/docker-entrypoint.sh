@@ -11,6 +11,10 @@ echo "Desplegando contratos..."
 npx hardhat run scripts/deploy.ts --network localhost
 npx hardhat run scripts/deploy-registry.ts --network localhost
 
+# Iniciar la API REST en segundo plano
+echo "Iniciando API REST..."
+node api.js &
+
 # Iniciar el servidor web
 echo "Iniciando servidor web..."
 node server.js

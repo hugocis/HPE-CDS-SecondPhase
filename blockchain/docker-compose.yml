@@ -6,6 +6,7 @@ services:
     container_name: ecotoken-blockchain
     ports:
       - "5051:5050"  # Puerto para la aplicación web
+      - "3001:3001"  # Puerto para la API REST
       - "8545:8545"  # Puerto para el nodo Hardhat
     volumes:
       - ./contracts:/app/contracts
