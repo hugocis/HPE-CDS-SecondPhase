@@ -23,12 +23,20 @@ export async function POST(request: Request) {
       select: {
         id: true,
         walletAddress: true,
+        privateKey: true,
       }
     });
 
     if (!user?.walletAddress) {
       return new NextResponse(
         JSON.stringify({ error: "User does not have a wallet" }), 
+        { status: 400 }
+      );
+    }
+
+    if (!user?.privateKey) {
+      return new NextResponse(
+        JSON.stringify({ error: "User does not have a private key" }), 
         { status: 400 }
       );
     }
@@ -81,7 +89,8 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         address: user.walletAddress,
-        amount: discount.tokenCost
+        amount: discount.tokenCost,
+        privateKey: user.privateKey
       }),
     });
 
