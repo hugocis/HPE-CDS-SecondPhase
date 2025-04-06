@@ -75,6 +75,15 @@ export default function Navbar() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16v-4m4 4v-4m4 4v-4M4 20h16a2 2 0 002-2V6a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       )
+    },
+    {
+      name: 'Rewards',
+      path: '/rewards',
+      icon: (
+        <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2zM17 16v2a2 2 0 01-2 2H9a2 2 0 01-2-2v-2M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+      )
     }
   ];
 
