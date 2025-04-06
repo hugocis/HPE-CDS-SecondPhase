@@ -3,6 +3,16 @@ const { ethers } = require('ethers');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const { Pool } = require('pg');
+
+// Configuración de PostgreSQL
+const pool = new Pool({
+    user: process.env.POSTGRES_USER || 'postgres',
+    host: process.env.POSTGRES_HOST || 'localhost',
+    database: process.env.POSTGRES_DB || 'ecotoken',
+    password: process.env.POSTGRES_PASSWORD || 'postgres',
+    port: process.env.POSTGRES_PORT || 5432,
+});
 
 // Cargar contratos compilados
 const SimpleStorageJson = require('./artifacts/contracts/SimpleStorage.sol/SimpleStorage.json');
@@ -13,7 +23,16 @@ const PORT = process.env.PORT || 3001;  // Puerto para la API
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    try {
+      JSON.parse(buf);
+    } catch(e) {
+      res.status(400).json({ error: 'Invalid JSON' });
+      throw new Error('Invalid JSON');
+    }
+  }
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Configuración de conexión a la blockchain
@@ -152,60 +171,33 @@ app.post('/api/tokens/mint', async (req, res) => {
     // Conectar el contrato con la wallet de admin
     const contractWithSigner = simpleStorageContract.connect(adminWallet);
     
-    // Obtener el nonce actual
-    const nonce = await provider.getTransactionCount(adminWallet.address);
+    console.log('Admin address:', adminWallet.address);
+    console.log('Minting to address:', address);
+    console.log('Amount:', amount);
     
-    try {
-      // Mintear tokens directamente a la dirección especificada usando la nueva función
-      const tx = await contractWithSigner.store(amount, address, {
-        nonce: nonce,
-        gasLimit: 200000 // Asegurar suficiente gas
-      });
-      
-      await tx.wait();
-      
-      // Verificar el nuevo balance
-      const newBalance = await simpleStorageContract.balanceOf(address);
-      
-      res.json({
-        success: true,
-        transactionHash: tx.hash,
-        amount,
-        address,
-        newBalance: newBalance.toString()
-      });
-    } catch (txError) {
-      console.error('Error en la transacción:', txError);
-      
-      // Si hay un error con el nonce, intentar recuperar
-      if (txError.code === 'NONCE_EXPIRED' || txError.message?.includes('nonce')) {
-        // Esperar un momento para que la red se sincronice
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Reintentar con un nuevo nonce
-        const newNonce = await provider.getTransactionCount(adminWallet.address);
-        const tx = await contractWithSigner.store(amount, address, {
-          nonce: newNonce,
-          gasLimit: 200000
-        });
-        
-        await tx.wait();
-        
-        // Verificar el nuevo balance después del reintento
-        const newBalance = await simpleStorageContract.balanceOf(address);
-        
-        res.json({
-          success: true,
-          transactionHash: tx.hash,
-          amount,
-          address,
-          newBalance: newBalance.toString(),
-          recovered: true
-        });
-      } else {
-        throw txError;
-      }
-    }
+    // Verificar que el admin tiene permisos
+    const isAdmin = await simpleStorageContract.isAdmin(adminWallet.address);
+    console.log('Is admin?', isAdmin);
+    
+    // Mintear tokens usando la función store con dos parámetros (amount, to)
+    const tx = await contractWithSigner.store(amount, address, {
+      gasLimit: 200000 // Asegurar suficiente gas
+    });
+    
+    console.log('Transaction hash:', tx.hash);
+    const receipt = await tx.wait();
+    console.log('Transaction confirmed:', receipt);
+    
+    // Verificar el nuevo balance
+    const newBalance = await simpleStorageContract.balanceOf(address);
+    
+    res.json({
+      success: true,
+      transactionHash: tx.hash,
+      amount,
+      address,
+      newBalance: newBalance.toString()
+    });
   } catch (error) {
     console.error('Error al mintear tokens:', error);
     res.status(500).json({ 
@@ -278,22 +270,74 @@ app.post('/api/tokens/burn', async (req, res) => {
       return res.status(400).json({ error: 'La clave privada no corresponde a la dirección proporcionada' });
     }
     
+    // Verificar el balance actual antes de quemar
+    const currentBalance = await simpleStorageContract.balanceOf(address);
+    if (currentBalance < amount) {
+      return res.status(400).json({ 
+        error: 'Balance insuficiente para quemar',
+        currentBalance: currentBalance.toString(),
+        requestedBurn: amount.toString()
+      });
+    }
+    
     // Conectar el contrato con la wallet del usuario
     const contractWithSigner = simpleStorageContract.connect(userWallet);
     
-    // Quemar tokens
-    const tx = await contractWithSigner.burn(amount);
+    console.log('Burning tokens...');
+    console.log('Address:', address);
+    console.log('Amount:', amount);
+    console.log('Current balance:', currentBalance.toString());
+    
+    // Quemar tokens con un límite de gas explícito
+    const tx = await contractWithSigner.burn(BigInt(amount), {
+      gasLimit: 100000
+    });
+    
+    console.log('Transaction hash:', tx.hash);
+    
+    // Esperar a que se mine la transacción
     const receipt = await tx.wait();
+    console.log('Transaction mined:', receipt);
+    
+    // Obtener el evento ValueBurned
+    const burnEvent = receipt.logs.find(log => {
+      try {
+        const parsed = simpleStorageContract.interface.parseLog(log);
+        return parsed?.name === 'ValueBurned';
+      } catch (e) {
+        return false;
+      }
+    });
+    
+    let eventData = null;
+    if (burnEvent) {
+      const parsed = simpleStorageContract.interface.parseLog(burnEvent);
+      eventData = {
+        oldValue: parsed.args[1].toString(),
+        newValue: parsed.args[2].toString(),
+        burnedAmount: parsed.args[3].toString()
+      };
+    }
+    
+    // Verificar el nuevo balance
+    const newBalance = await simpleStorageContract.balanceOf(address);
     
     res.json({
       success: true,
       transactionHash: tx.hash,
       address,
-      amount
+      burnedAmount: amount.toString(),
+      oldBalance: currentBalance.toString(),
+      newBalance: newBalance.toString(),
+      eventData
     });
   } catch (error) {
-    console.error('Error al quemar tokens:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Error detallado al quemar tokens:', error);
+    res.status(500).json({ 
+      error: error.message,
+      code: error.code,
+      details: error.info?.error?.message || error.shortMessage
+    });
   }
 });
 
@@ -438,6 +482,89 @@ app.put('/api/users/update-username', async (req, res) => {
     });
   } catch (error) {
     console.error('Error al actualizar nombre de usuario:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Nuevo endpoint para importar usuarios desde PostgreSQL
+app.post('/api/users/import-from-postgres', async (req, res) => {
+  try {
+    if (!userRegistryContract || !adminWallet) {
+      return res.status(500).json({ error: 'Contrato UserRegistry o wallet de admin no inicializado' });
+    }
+
+    // Conectar el contrato con la wallet de admin para el registro
+    const contractWithSigner = userRegistryContract.connect(adminWallet);
+
+    // Obtener usuarios de PostgreSQL
+    const result = await pool.query(`
+        SELECT 
+            name as username,
+            walletAddress as public_key,
+            privateKey as private_key
+        FROM "User" 
+        WHERE "walletAddress" IS NOT NULL 
+        AND "privateKey" IS NOT NULL
+    `);
+
+    const importResults = [];
+    const errors = [];
+
+    for (const user of result.rows) {
+      try {
+        // Verificar si la dirección ya está registrada
+        const isRegistered = await userRegistryContract.isRegistered(user.public_key);
+        
+        if (!isRegistered) {
+          // Crear wallet con la clave privada del usuario
+          const userWallet = new ethers.Wallet(user.private_key, provider);
+          
+          // Verificar que la clave pública coincide
+          if (userWallet.address.toLowerCase() !== user.public_key.toLowerCase()) {
+            throw new Error(`La clave privada no coincide con la pública para el usuario ${user.username}`);
+          }
+
+          // Registrar el usuario
+          const tx = await contractWithSigner.registerWithExistingWallet(
+            user.username,
+            { gasLimit: 200000 }
+          );
+          const receipt = await tx.wait();
+
+          importResults.push({
+            username: user.username,
+            address: user.public_key,
+            status: 'success',
+            txHash: receipt.hash
+          });
+        } else {
+          importResults.push({
+            username: user.username,
+            address: user.public_key,
+            status: 'skipped',
+            reason: 'Already registered'
+          });
+        }
+      } catch (error) {
+        console.error(`Error importing user ${user.username}:`, error);
+        errors.push({
+          username: user.username,
+          error: error.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      total: result.rows.length,
+      imported: importResults.filter(r => r.status === 'success').length,
+      skipped: importResults.filter(r => r.status === 'skipped').length,
+      failed: errors.length,
+      results: importResults,
+      errors
+    });
+  } catch (error) {
+    console.error('Error en la importación:', error);
     res.status(500).json({ error: error.message });
   }
 });

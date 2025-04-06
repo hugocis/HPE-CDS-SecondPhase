@@ -27,12 +27,12 @@ export default function DiscountsSection({ discounts, userId }: DiscountsSection
         }),
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to redeem discount');
+        throw new Error(data.error || 'Failed to redeem discount');
       }
 
-      const data = await response.json();
       setQrData(data);
     } catch (error) {
       console.error('Error redeeming discount:', error);

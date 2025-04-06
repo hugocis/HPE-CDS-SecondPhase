@@ -27,12 +27,12 @@ export default function AmenitiesSection({ amenities, userId }: AmenitiesSection
         }),
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to purchase amenity');
+        throw new Error(data.error || 'Failed to purchase amenity');
       }
 
-      const data = await response.json();
       setQrData(data);
     } catch (error) {
       console.error('Error purchasing amenity:', error);
