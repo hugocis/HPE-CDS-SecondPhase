@@ -6,46 +6,53 @@ export function CustomPrismaAdapter(): Adapter {
     async createUser(data: Omit<AdapterUser, "id">) {
       const user = await prisma.user.create({
         data: {
-          email: data.email!,
+          email: data.email,
           name: data.name || "User",
           role: "USER",
           password: "" // This will be set during registration
         },
       });
+
       return {
         id: user.id.toString(),
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        emailVerified: null
+        email: user.email!,
+        name: user.name!,
+        emailVerified: null,
+        role: user.role
       };
     },
 
     async getUser(id: string) {
-      const user = await prisma.user.findUnique({ where: { id: parseInt(id) } });
+      const user = await prisma.user.findUnique({ 
+        where: { 
+          id: id 
+        } 
+      });
       if (!user) return null;
+
       return {
         id: user.id.toString(),
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        emailVerified: null
+        email: user.email!,
+        name: user.name!,
+        emailVerified: null,
+        role: user.role
       };
     },
 
     async getUserByEmail(email: string) {
       const user = await prisma.user.findUnique({ where: { email } });
       if (!user) return null;
+
       return {
         id: user.id.toString(),
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        emailVerified: null
+        email: user.email!,
+        name: user.name!,
+        emailVerified: null,
+        role: user.role
       };
     },
 
-    async getUserByAccount({ providerAccountId, provider }: { providerAccountId: string, provider: string }) {
+    async getUserByAccount({ providerAccountId, provider }) {
       const userAccount = await prisma.account.findUnique({
         where: {
           provider_providerAccountId: {
@@ -57,12 +64,13 @@ export function CustomPrismaAdapter(): Adapter {
       });
       if (!userAccount) return null;
       const { user } = userAccount;
+
       return {
         id: user.id.toString(),
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        emailVerified: null
+        email: user.email!,
+        name: user.name!,
+        emailVerified: null,
+        role: user.role
       };
     },
 
@@ -70,26 +78,25 @@ export function CustomPrismaAdapter(): Adapter {
       const data: any = {};
       if (user.name) data.name = user.name;
       if (user.email) data.email = user.email;
-      if (user.role) data.role = user.role;
 
       const updated = await prisma.user.update({
-        where: { id: parseInt(user.id) },
+        where: { id: user.id },
         data
       });
 
       return {
         id: updated.id.toString(),
-        email: updated.email,
-        name: updated.name,
-        role: updated.role,
-        emailVerified: null
+        email: updated.email!,
+        name: updated.name!,
+        emailVerified: null,
+        role: updated.role
       };
     },
 
     async linkAccount(account: AdapterAccount) {
       await prisma.account.create({
         data: {
-          userId: parseInt(account.userId),
+          userId: account.userId,
           type: account.type,
           provider: account.provider,
           providerAccountId: account.providerAccountId,
@@ -108,7 +115,7 @@ export function CustomPrismaAdapter(): Adapter {
       await prisma.session.create({
         data: {
           sessionToken: session.sessionToken,
-          userId: parseInt(session.userId),
+          userId: session.userId,
           expires: session.expires,
         },
       });
@@ -128,10 +135,10 @@ export function CustomPrismaAdapter(): Adapter {
       return {
         user: {
           id: user.id.toString(),
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          emailVerified: null
+          email: user.email!,
+          name: user.name!,
+          emailVerified: null,
+          role: user.role
         },
         session: {
           sessionToken: session.sessionToken,
@@ -158,6 +165,6 @@ export function CustomPrismaAdapter(): Adapter {
 
     async deleteSession(sessionToken: string) {
       await prisma.session.delete({ where: { sessionToken } });
-    },
+    }
   };
 }
