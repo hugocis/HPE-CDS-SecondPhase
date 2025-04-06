@@ -21,19 +21,28 @@ contract SimpleStorage {
     event ContractPaused(address indexed by);
     event ContractUnpaused(address indexed by);
 
+    // Custom errors
+    error OnlyOwnerAllowed();
+    error OnlyAdminOrOwnerAllowed();
+    error ContractIsPaused();
+    error InsufficientBalance(uint256 requested, uint256 available);
+    error InvalidAmount();
+    error InvalidAddress();
+    error CannotRemoveOwnerAsAdmin();
+
     // Modifiers
     modifier onlyOwner() {
-        require(msg.sender == owner, "Solo el owner puede realizar esta accion");
+        if (msg.sender != owner) revert OnlyOwnerAllowed();
         _;
     }
 
     modifier onlyAdminOrOwner() {
-        require(msg.sender == owner || administrators[msg.sender], "Solo administradores pueden realizar esta accion");
+        if (msg.sender != owner && !administrators[msg.sender]) revert OnlyAdminOrOwnerAllowed();
         _;
     }
 
     modifier whenNotPaused() {
-        require(!paused, "Contrato esta pausado");
+        if (paused) revert ContractIsPaused();
         _;
     }
 
@@ -46,12 +55,13 @@ contract SimpleStorage {
 
     // Administrative functions
     function addAdmin(address account) public onlyOwner {
+        if (account == address(0)) revert InvalidAddress();
         administrators[account] = true;
         emit AdminAdded(account);
     }
 
     function removeAdmin(address account) public onlyOwner {
-        require(account != owner, "No puedes remover al owner como admin");
+        if (account == owner) revert CannotRemoveOwnerAsAdmin();
         administrators[account] = false;
         emit AdminRemoved(account);
     }
@@ -72,6 +82,9 @@ contract SimpleStorage {
 
     // Main functions
     function store(uint256 value, address to) public onlyAdminOrOwner whenNotPaused {
+        if (value == 0) revert InvalidAmount();
+        if (to == address(0)) revert InvalidAddress();
+        
         uint256 oldValue = balances[to];
         balances[to] += value;
         emit ValueChanged(to, oldValue, balances[to], value);
@@ -79,21 +92,26 @@ contract SimpleStorage {
     
     // Función original para auto-minteo (mantener compatibilidad)
     function store(uint256 value) public whenNotPaused {
+        if (value == 0) revert InvalidAmount();
+        
         uint256 oldValue = balances[msg.sender];
         balances[msg.sender] += value;
         emit ValueChanged(msg.sender, oldValue, balances[msg.sender], value);
     }
 
     function burn(uint256 amount) public whenNotPaused {
-        require(amount <= balances[msg.sender], "No puedes quemar mas del valor almacenado");
+        if (amount == 0) revert InvalidAmount();
+        if (amount > balances[msg.sender]) revert InsufficientBalance(amount, balances[msg.sender]);
+        
         uint256 oldValue = balances[msg.sender];
         balances[msg.sender] -= amount;
         emit ValueBurned(msg.sender, oldValue, balances[msg.sender], amount);
     }
 
     function transfer(address to, uint256 amount) public whenNotPaused {
-        require(to != address(0), "No puedes transferir a la direccion cero");
-        require(amount <= balances[msg.sender], "Balance insuficiente");
+        if (to == address(0)) revert InvalidAddress();
+        if (amount == 0) revert InvalidAmount();
+        if (amount > balances[msg.sender]) revert InsufficientBalance(amount, balances[msg.sender]);
         
         balances[msg.sender] -= amount;
         balances[to] += amount;
