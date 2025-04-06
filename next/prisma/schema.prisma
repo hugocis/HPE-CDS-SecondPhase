@@ -56,6 +56,8 @@ model User {
   cart          Cart?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  discountRedemptions DiscountRedemption[]
+  amenityPurchases    AmenityPurchase[]
 }
 
 // Cart and Order models
@@ -101,6 +103,8 @@ model Order {
   paymentMethod String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  discountRedemptions DiscountRedemption[]
+  amenityPurchases    AmenityPurchase[]
 }
 
 // Model for tourist routes
@@ -194,4 +198,70 @@ model Review {
   
   routeId       Int?
   route         Route?    @relation("RouteReviews", fields: [routeId], references: [id])
+}
+
+// Discounts and Amenities models
+model Discount {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  tokenCost   Int
+  discountType String  // PERCENTAGE, FIXED_AMOUNT
+  discountValue Float
+  validFrom   DateTime
+  validUntil  DateTime
+  maxUses     Int?
+  usedCount   Int      @default(0)
+  isActive    Boolean  @default(true)
+  applicableTo String[] @default([])
+  qrCode      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  redemptions DiscountRedemption[]
+}
+
+model DiscountRedemption {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  discountId  Int
+  discount    Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
+  orderId     Int?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  redeemedAt  DateTime @default(now())
+  tokensPaid  Int
+  qrCode      String
+  isUsed      Boolean  @default(false)
+  usedAt      DateTime?
+}
+
+model Amenity {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  tokenCost   Int
+  type        String   // VIP_ACCESS, SPECIAL_SERVICE, etc.
+  isActive    Boolean  @default(true)
+  maxQuantity Int?
+  qrCode      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  purchases   AmenityPurchase[]
+}
+
+model AmenityPurchase {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amenityId   Int
+  amenity     Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+  orderId     Int?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  quantity    Int      @default(1)
+  tokensPaid  Int
+  purchasedAt DateTime @default(now())
+  status      String   @default("ACTIVE")
+  qrCode      String
+  isUsed      Boolean  @default(false)
+  usedAt      DateTime?
 }
