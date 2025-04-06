@@ -1,221 +1,770 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SimpleStorage Interface</title>
+    <title>EcoToken Platform</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #4CAF50;
+            --primary-hover: #45a049;
+            --secondary-color: #2196F3;
+            --danger-color: #f44336;
+            --warning-color: #ff9800;
+            --light-bg: #f8f9fa;
+            --dark-bg: #343a40;
+            --border-color: #ddd;
+            --text-color: #333;
+            --light-text: #fff;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: #f0f2f5;
+            padding-top: 60px;
         }
-        .container {
-            background-color: #f5f5f5;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-        .admin-section {
-            background-color: #e8f5e9;
-        }
-        .transfer-section {
-            background-color: #e3f2fd;
-        }
-        button {
-            background-color: #4CAF50;
+        
+        /* Navbar Styles */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--primary-color);
             color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            height: 60px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+        
+        .navbar-brand i {
+            margin-right: 8px;
+        }
+        
+        .navbar-menu {
+            display: flex;
+            list-style: none;
+        }
+        
+        .navbar-item {
+            padding: 0 15px;
+            position: relative;
+        }
+        
+        .navbar-link {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 20px 0;
+            display: block;
+            transition: color 0.3s;
+        }
+        
+        .navbar-link:hover {
+            color: #e8f5e9;
+        }
+        
+        .active-nav {
+            border-bottom: 3px solid white;
+        }
+        
+        /* Connection Status */
+        .connection-status {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+        }
+        
+        .status-indicator {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .connected {
+            background-color: var(--primary-color);
+        }
+        
+        .disconnected {
+            background-color: var(--danger-color);
+        }
+        
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        
+        .section {
+            display: none;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        .section-title {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+        }
+        
+        /* Dev Banner */
+        .dev-banner {
+            background-color: #fff3cd;
+            color: #856404;
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+        }
+
+        /* Cards */
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        
+        .btn {
             padding: 10px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            margin: 5px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+            font-size: 1rem;
         }
-        button:hover {
-            background-color: #45a049;
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
         }
-        button.danger {
-            background-color: #f44336;
+        
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
         }
-        button.danger:hover {
+        
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-danger:hover {
             background-color: #da190b;
         }
-        input {
-            padding: 8px;
-            margin: 5px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            width: 200px;
-        }
-        .status {
+        
+        /* Status Badges */
+        .badge {
             padding: 5px 10px;
             border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
             display: inline-block;
-            margin: 5px;
         }
-        .status.active {
-            background-color: #4CAF50;
+        
+        .badge-success {
+            background-color: var(--primary-color);
             color: white;
         }
-        .status.paused {
-            background-color: #f44336;
+        
+        .badge-danger {
+            background-color: var(--danger-color);
             color: white;
         }
-        .user-section {
-            background-color: #fff3e0;
+        
+        .badge-warning {
+            background-color: var(--warning-color);
+            color: white;
         }
-        .error {
-            color: #f44336;
-            margin: 5px 0;
+        
+        /* Utility Classes */
+        .mt-3 {
+            margin-top: 15px;
         }
-        .success {
-            color: #4CAF50;
-            margin: 5px 0;
+        
+        .mb-3 {
+            margin-bottom: 15px;
         }
-        .wallet-section {
-            background-color: #e8eaf6;
-            margin-bottom: 20px;
+        
+        .d-flex {
+            display: flex;
         }
-        .generated-wallet-info {
+        
+        .justify-between {
+            justify-content: space-between;
+        }
+        
+        .align-center {
+            align-items: center;
+        }
+        
+        .flex-wrap {
+            flex-wrap: wrap;
+        }
+        
+        .gap-3 {
+            gap: 15px;
+        }
+        
+        /* User Info */
+        .user-info {
+            padding: 15px;
+            background-color: #e8f5e9;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        /* Wallet Info */
+        .wallet-info {
             background-color: #fff3e0;
             padding: 15px;
-            border-radius: 4px;
-            margin-top: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
         }
-        .warning {
-            color: #ff5722;
-            font-weight: bold;
-        }
+        
         .secret-key {
             background: #f5f5f5;
             padding: 10px;
             border-radius: 4px;
             word-break: break-all;
+            font-family: monospace;
+            margin-top: 10px;
         }
-        .dev-banner {
-            background-color: #fff3cd;
-            color: #856404;
-            padding: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #ffeeba;
-            border-radius: 4px;
-            text-align: center;
-        }
+        
+        /* Contract Info */
         .contract-info {
             background-color: #e8f5e9;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-        .verify-box {
-            background-color: #e3f2fd;
             padding: 15px;
-            margin: 10px 0;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+        
+        /* Explorer Styles */
+        .explorer-header {
+            margin-bottom: 20px;
+        }
+        
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .search-bar input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
             border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .stat-box h4 {
+            margin: 0 0 10px 0;
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        
+        .stat-box p {
+            margin: 0;
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            color: #666;
+            position: relative;
+        }
+        
+        .tab-btn.active {
+            color: var(--primary-color);
+        }
+        
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--primary-color);
+        }
+        
+        .tab-content {
             display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .hash-cell, .address-cell {
+            font-family: monospace;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .time-cell {
+            color: #666;
+            font-size: 0.85rem;
+        }
+        
+        /* Verification Dialog */
+        .verify-box {
+            background-color: #e8f5e9;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0 10px;
+            }
+            
+            .navbar-menu {
+                position: fixed;
+                top: 60px;
+                left: 0;
+                width: 100%;
+                background-color: var(--primary-color);
+                flex-direction: column;
+                align-items: center;
+                transform: translateY(-100%);
+                transition: transform 0.3s;
+                z-index: 999;
+            }
+            
+            .navbar-menu.active {
+                transform: translateY(0);
+            }
+            
+            .navbar-item {
+                width: 100%;
+                text-align: center;
+                padding: 15px 0;
+                border-top: 1px solid rgba(255,255,255,0.1);
+            }
+            
+            .menu-toggle {
+                display: block;
+                font-size: 1.5rem;
+                cursor: pointer;
+            }
+            
+            .stats-panel {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="dev-banner">
-        ⚠️ Entorno de Desarrollo Local - Red Hardhat
-        <br>
-        <small>Las advertencias de MetaMask son normales en este entorno</small>
-    </div>
-    
-    <h1>EcoToken Interface</h1>
-    
-    <div class="container">
-        <h2>Connection Status</h2>
-        <p id="connectionStatus">Not connected to MetaMask</p>
-        <button onclick="connectWallet()">Connect Wallet</button>
-        <p>Contract Status: <span id="contractStatus" class="status">Checking...</span></p>
-        <p>Your Role: <span id="userRole">Unknown</span></p>
-        <div class="contract-info">
-            <h3>Información de Contratos</h3>
-            <p>SimpleStorage: <span id="simpleStorageAddress">Cargando...</span></p>
-            <p>UserRegistry: <span id="userRegistryAddress">Cargando...</span></p>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <i class="fas fa-leaf"></i> EcoToken
         </div>
-    </div>
+        <ul class="navbar-menu" id="navMenu">
+            <li class="navbar-item">
+                <a href="#" class="navbar-link active-nav" data-section="home">Inicio</a>
+            </li>
+            <li class="navbar-item">
+                <a href="#" class="navbar-link" data-section="registry">Registro</a>
+            </li>
+            <li class="navbar-item">
+                <a href="#" class="navbar-link" data-section="tokens">Tokens</a>
+            </li>
+            <li class="navbar-item">
+                <a href="#" class="navbar-link" data-section="explorer">Explorador</a>
+            </li>
+            <li class="navbar-item" id="adminNavItem" style="display: none;">
+                <a href="#" class="navbar-link" data-section="admin">Admin</a>
+            </li>
+        </ul>
+        <div class="connection-status">
+            <div class="status-indicator disconnected" id="connectionIndicator"></div>
+            <span id="connectionStatusText">Desconectado</span>
+            <button class="btn btn-primary" id="connectBtn" style="margin-left: 10px;">Conectar</button>
+        </div>
+    </nav>
 
-    <div class="container wallet-section">
-        <h2>Registro de Usuario</h2>
-        <div id="walletChoiceSection">
-            <h3>Elige cómo quieres registrarte:</h3>
-            <button onclick="showMetaMaskRegistration()">Usar MetaMask</button>
-            <button onclick="showNewWalletRegistration()">Crear Nueva Cartera</button>
+    <div class="main-container">
+        <div class="dev-banner">
+            ⚠️ Entorno de Desarrollo Local - Red Hardhat
+            <br>
+            <small>Las advertencias de MetaMask son normales en este entorno</small>
         </div>
 
-        <div id="metamaskRegistration" style="display: none;">
-            <h3>Registro con MetaMask</h3>
-            <input type="text" id="usernameMetaMask" placeholder="Nombre de usuario">
-            <button onclick="registerWithMetaMask()">Registrar con MetaMask</button>
-        </div>
-
-        <div id="newWalletRegistration" style="display: none;">
-            <h3>Crear Nueva Cartera</h3>
-            <input type="text" id="usernameNewWallet" placeholder="Nombre de usuario">
-            <button onclick="createAndRegisterWallet()">Crear y Registrar Cartera</button>
+        <!-- Home Section -->
+        <section id="home" class="section active">
+            <h2 class="section-title">Plataforma EcoToken</h2>
             
-            <div id="generatedWalletInfo" class="generated-wallet-info" style="display: none;">
-                <h4>¡Cartera Generada Exitosamente!</h4>
-                <p class="warning">IMPORTANTE: Guarda esta información de forma segura. No la compartas con nadie.</p>
-                <div>
+            <div class="card">
+                <div class="card-title">Estado de Conexión</div>
+                <p>Contrato: <span id="contractStatus" class="badge badge-danger">Desconectado</span></p>
+                <p class="mt-3">Tu Rol: <span id="userRole">Desconocido</span></p>
+                
+                <div id="userInfo" style="display: none;" class="user-info mt-3">
+                    <h4>Información de Usuario</h4>
+                    <p>Usuario: <strong id="userUsername"></strong></p>
+                    <p>Fecha de Registro: <span id="userRegDate"></span></p>
+                </div>
+                
+                <div class="contract-info">
+                    <h4>Información de Contratos</h4>
+                    <p>SimpleStorage: <span id="simpleStorageAddress">Cargando...</span></p>
+                    <p>UserRegistry: <span id="userRegistryAddress">Cargando...</span></p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Tu Balance</div>
+                <div class="d-flex justify-between align-center">
+                    <p>Balance Actual: <strong id="currentValue">No recuperado aún</strong></p>
+                    <button class="btn btn-primary" onclick="retrieveNumber()">
+                        <i class="fas fa-sync-alt"></i> Actualizar
+                    </button>
+                </div>
+                
+                <div class="form-group mt-3">
+                    <label>Consultar Balance de Dirección:</label>
+                    <div class="d-flex gap-3">
+                        <input type="text" id="balanceCheckAddress" class="form-control" placeholder="Dirección a consultar">
+                        <button class="btn btn-primary" onclick="checkBalance()">Consultar</button>
+                    </div>
+                    <p class="mt-3">Balance: <strong id="addressBalance">No consultado</strong></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Registry Section -->
+        <section id="registry" class="section">
+            <h2 class="section-title">Registro de Usuario</h2>
+            
+            <div class="card" id="walletChoiceSection">
+                <div class="card-title">Elige cómo quieres registrarte</div>
+                <p class="mb-3">Para interactuar con la plataforma, primero debes registrarte:</p>
+                <div class="d-flex gap-3">
+                    <button class="btn btn-primary" onclick="showMetaMaskRegistration()">
+                        <i class="fas fa-mask"></i> Usar MetaMask
+                    </button>
+                    <button class="btn btn-secondary" onclick="showNewWalletRegistration()">
+                        <i class="fas fa-wallet"></i> Crear Nueva Cartera
+                    </button>
+                </div>
+            </div>
+
+            <div class="card" id="metamaskRegistration" style="display: none;">
+                <div class="card-title">Registro con MetaMask</div>
+                <div class="form-group">
+                    <label>Nombre de usuario:</label>
+                    <input type="text" id="usernameMetaMask" class="form-control" placeholder="Nombre de usuario">
+                    <button class="btn btn-primary mt-3" onclick="registerWithMetaMask()">
+                        <i class="fas fa-user-plus"></i> Registrar con MetaMask
+                    </button>
+                </div>
+            </div>
+
+            <div class="card" id="newWalletRegistration" style="display: none;">
+                <div class="card-title">Crear Nueva Cartera</div>
+                <div class="form-group">
+                    <label>Nombre de usuario:</label>
+                    <input type="text" id="usernameNewWallet" class="form-control" placeholder="Nombre de usuario">
+                    <button class="btn btn-primary mt-3" onclick="createAndRegisterWallet()">
+                        <i class="fas fa-plus-circle"></i> Crear y Registrar Cartera
+                    </button>
+                </div>
+                
+                <div id="generatedWalletInfo" class="wallet-info" style="display: none;">
+                    <h4>¡Cartera Generada Exitosamente!</h4>
+                    <p class="mb-3" style="color: #ff5722; font-weight: bold;">
+                        IMPORTANTE: Guarda esta información de forma segura. No la compartas con nadie.
+                    </p>
                     <p><strong>Dirección de la Cartera:</strong><br>
                     <span id="generatedAddress"></span></p>
                     
-                    <p><strong>Clave Privada:</strong><br>
-                    <div class="secret-key" id="privateKey"></div></p>
+                    <p><strong>Clave Privada:</strong></p>
+                    <div class="secret-key" id="privateKey"></div>
                     
-                    <button onclick="downloadWalletInfo()">Descargar Información de la Cartera</button>
+                    <button class="btn btn-primary mt-3" onclick="downloadWalletInfo()">
+                        <i class="fas fa-download"></i> Descargar Información
+                    </button>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <div class="container admin-section" id="adminSection" style="display: none;">
-        <h2>Administrative Functions</h2>
-        <button onclick="togglePause()" id="pauseButton">Pause Contract</button>
-        <div>
-            <h3>Manage Administrators</h3>
-            <input type="text" id="adminAddress" placeholder="Administrator address">
-            <button onclick="addAdmin()">Add Admin</button>
-            <button onclick="removeAdmin()">Remove Admin</button>
-        </div>
-    </div>
+        <!-- Tokens Section -->
+        <section id="tokens" class="section">
+            <h2 class="section-title">Gestión de Tokens</h2>
+            
+            <div class="card">
+                <div class="card-title">Mintear Tokens</div>
+                <div class="form-group">
+                    <label>Cantidad a mintear:</label>
+                    <input type="number" id="storeValue" class="form-control" placeholder="Ingresa una cantidad">
+                    <button class="btn btn-primary mt-3" onclick="storeNumber()">
+                        <i class="fas fa-plus-circle"></i> Mintear Tokens
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Quemar Tokens</div>
+                <div class="form-group">
+                    <label>Cantidad a quemar:</label>
+                    <input type="number" id="burnValue" class="form-control" placeholder="Ingresa una cantidad">
+                    <button class="btn btn-danger mt-3" onclick="burnNumber()">
+                        <i class="fas fa-fire"></i> Quemar Tokens
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Transferir Tokens</div>
+                <div class="form-group">
+                    <label>Dirección del destinatario:</label>
+                    <input type="text" id="transferTo" class="form-control" placeholder="Dirección del receptor">
+                    <label class="mt-3">Cantidad a transferir:</label>
+                    <input type="number" id="transferAmount" class="form-control" placeholder="Cantidad">
+                    <button class="btn btn-primary mt-3" onclick="transferValue()">
+                        <i class="fas fa-paper-plane"></i> Transferir
+                    </button>
+                </div>
+            </div>
+        </section>
 
-    <div class="container">
-        <h2>Store Value</h2>
-        <input type="number" id="storeValue" placeholder="Enter a number to add">
-        <button onclick="storeNumber()">Add Value</button>
-    </div>
+        <!-- Admin Section -->
+        <section id="admin" class="section">
+            <h2 class="section-title">Panel de Administración</h2>
+            
+            <div class="card">
+                <div class="card-title">Estado del Contrato</div>
+                <button class="btn btn-primary" onclick="togglePause()" id="pauseButton">
+                    Pausar Contrato
+                </button>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Gestionar Administradores</div>
+                <div class="form-group">
+                    <label>Dirección del administrador:</label>
+                    <input type="text" id="adminAddress" class="form-control" placeholder="Dirección del administrador">
+                    <div class="d-flex gap-3 mt-3">
+                        <button class="btn btn-primary" onclick="addAdmin()">
+                            <i class="fas fa-user-plus"></i> Añadir Admin
+                        </button>
+                        <button class="btn btn-danger" onclick="removeAdmin()">
+                            <i class="fas fa-user-minus"></i> Eliminar Admin
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-    <div class="container">
-        <h2>Burn Value</h2>
-        <input type="number" id="burnValue" placeholder="Enter a number to burn">
-        <button onclick="burnNumber()">Burn Value</button>
-    </div>
-
-    <div class="container transfer-section">
-        <h2>Transfer Value</h2>
-        <input type="text" id="transferTo" placeholder="Recipient address">
-        <input type="number" id="transferAmount" placeholder="Amount to transfer">
-        <button onclick="transferValue()">Transfer</button>
-    </div>
-
-    <div class="container">
-        <h2>Account Balance</h2>
-        <button onclick="retrieveNumber()">Refresh Balance</button>
-        <p>Your Balance: <span id="currentValue">Not retrieved yet</span></p>
-        <input type="text" id="balanceCheckAddress" placeholder="Check address balance">
-        <button onclick="checkBalance()">Check Balance</button>
-        <p>Address Balance: <span id="addressBalance">Not checked</span></p>
+        <!-- Explorer Section -->
+        <section id="explorer" class="section">
+            <h2 class="section-title">Explorador de Blockchain</h2>
+            
+            <div class="explorer-header">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Buscar por dirección / tx hash / bloque">
+                    <button class="btn btn-primary" onclick="search()">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+                
+                <div class="stats-panel">
+                    <div class="stat-box">
+                        <h4>Último Bloque</h4>
+                        <p id="lastBlock">-</p>
+                    </div>
+                    <div class="stat-box">
+                        <h4>Total Transacciones</h4>
+                        <p id="totalTx">-</p>
+                    </div>
+                    <div class="stat-box">
+                        <h4>Holders</h4>
+                        <p id="totalHolders">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab('transactions')">
+                    <i class="fas fa-exchange-alt"></i> Transacciones
+                </button>
+                <button class="tab-btn" onclick="showTab('blocks')">
+                    <i class="fas fa-cube"></i> Bloques
+                </button>
+                <button class="tab-btn" onclick="showTab('holders')">
+                    <i class="fas fa-users"></i> Holders
+                </button>
+            </div>
+            
+            <div id="transactions" class="tab-content active">
+                <table class="tx-table">
+                    <thead>
+                        <tr>
+                            <th>Hash</th>
+                            <th>Bloque</th>
+                            <th>De</th>
+                            <th>Para</th>
+                            <th>Valor</th>
+                            <th>Tiempo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="txList"></tbody>
+                </table>
+            </div>
+            
+            <div id="blocks" class="tab-content">
+                <table class="block-table">
+                    <thead>
+                        <tr>
+                            <th>Bloque</th>
+                            <th>Tiempo</th>
+                            <th>Txs</th>
+                            <th>Gas Usado</th>
+                            <th>Minero</th>
+                        </tr>
+                    </thead>
+                    <tbody id="blockList"></tbody>
+                </table>
+            </div>
+            
+            <div id="holders" class="tab-content">
+                <table class="holders-table">
+                    <thead>
+                        <tr>
+                            <th>Rango</th>
+                            <th>Dirección</th>
+                            <th>Balance</th>
+                            <th>% Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="holdersList"></tbody>
+                </table>
+            </div>
+        </section>
     </div>
 
     <script>
+        // Variables globales
         let contractAddress;
         let registryAddress;
         const contractABI = [
@@ -259,6 +808,36 @@
         let userAddress;
         let registryContract;
 
+        // Navegación
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configurar navegación
+            const navLinks = document.querySelectorAll('.navbar-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Quitar clase activa de todos los enlaces
+                    navLinks.forEach(l => l.classList.remove('active-nav'));
+                    
+                    // Añadir clase activa al enlace clicado
+                    this.classList.add('active-nav');
+                    
+                    // Mostrar la sección correspondiente
+                    const section = this.getAttribute('data-section');
+                    document.querySelectorAll('.section').forEach(s => {
+                        s.classList.remove('active');
+                    });
+                    document.getElementById(section).classList.add('active');
+                });
+            });
+            
+            // Configurar botón de conexión
+            document.getElementById('connectBtn').addEventListener('click', connectWallet);
+            
+            // Cargar direcciones de contratos
+            loadContractAddresses();
+        });
+
         // Añadir función para mostrar dialog de verificación
         async function showVerificationDialog(action, value) {
             const verifyBox = document.createElement('div');
@@ -275,7 +854,7 @@
                 <p>✅ Es seguro continuar si los datos anteriores son correctos.</p>
             `;
             
-            document.querySelector('.container').insertBefore(verifyBox, document.querySelector('.container').firstChild);
+            document.querySelector('.card').insertBefore(verifyBox, document.querySelector('.card').firstChild);
             setTimeout(() => verifyBox.remove(), 10000);
         }
 
@@ -341,6 +920,279 @@
             }
         }
 
+        // Funciones del explorador
+        async function updateExplorerData() {
+            if (!provider) return;
+            
+            try {
+                // Actualizar último bloque
+                const lastBlockNumber = await provider.getBlockNumber();
+                document.getElementById('lastBlock').textContent = lastBlockNumber;
+
+                // Actualizar total de transacciones
+                const txCount = await getTotalTransactions();
+                document.getElementById('totalTx').textContent = txCount || '0';
+
+                // Actualizar holders
+                const holders = await getHolders();
+                document.getElementById('totalHolders').textContent = holders.length;
+
+                // Actualizar listas
+                await updateTransactionsList();
+                await updateBlocksList();
+                await updateHoldersList();
+            } catch (error) {
+                console.error('Error actualizando datos del explorador:', error);
+            }
+        }
+
+        async function getTotalTransactions() {
+            try {
+                const filter = contract.filters.Transfer();
+                const events = await contract.queryFilter(filter);
+                return events.length;
+            } catch (error) {
+                console.error('Error getting total transactions:', error);
+                return 0;
+            }
+        }
+
+        async function getHolders() {
+            try {
+                const filter = contract.filters.Transfer();
+                const events = await contract.queryFilter(filter);
+                const holders = new Set();
+                
+                for (const event of events) {
+                    if (!event.args) continue;
+                    
+                    const from = event.args[0];
+                    const to = event.args[1];
+                    
+                    if (from && to) {
+                        try {
+                            const toBalance = await contract.balanceOf(to);
+                            const fromBalance = await contract.balanceOf(from);
+                            
+                            if (toBalance > 0) holders.add(to);
+                            if (fromBalance > 0) holders.add(from);
+                        } catch (e) {
+                            console.error('Error al obtener balance:', e);
+                        }
+                    }
+                }
+                
+                return Array.from(holders);
+            } catch (error) {
+                console.error('Error getting holders:', error);
+                return [];
+            }
+        }
+
+        async function updateTransactionsList() {
+            try {
+                const txList = document.getElementById('txList');
+                txList.innerHTML = '';
+                
+                const filter = contract.filters.Transfer();
+                const events = await contract.queryFilter(filter, -100); // Últimas 100 transacciones
+                
+                if (events.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = '<td colspan="6" style="text-align: center;">No hay transacciones disponibles</td>';
+                    txList.appendChild(row);
+                    return;
+                }
+                
+                for (const event of events.reverse()) {
+                    try {
+                        if (!event.args) continue;
+                        
+                        const from = event.args[0];
+                        const to = event.args[1];
+                        const value = event.args[2];
+                        
+                        let block;
+                        try {
+                            block = await event.getBlock();
+                        } catch (e) {
+                            console.error('Error al obtener bloque:', e);
+                            block = { timestamp: Date.now() / 1000 };
+                        }
+                        
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="hash-cell">${event.transactionHash}</td>
+                            <td>${event.blockNumber}</td>
+                            <td class="address-cell">${from}</td>
+                            <td class="address-cell">${to}</td>
+                            <td>${value.toString()}</td>
+                            <td class="time-cell">${new Date(block.timestamp * 1000).toLocaleString()}</td>
+                        `;
+                        txList.appendChild(row);
+                    } catch (e) {
+                        console.error('Error processing transaction:', e);
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating transactions list:', error);
+                const txList = document.getElementById('txList');
+                txList.innerHTML = '<tr><td colspan="6" style="text-align: center;">Error al cargar transacciones</td></tr>';
+            }
+        }
+
+        async function updateBlocksList() {
+            try {
+                const blockList = document.getElementById('blockList');
+                blockList.innerHTML = '';
+                
+                const currentBlock = await provider.getBlockNumber();
+                
+                if (currentBlock <= 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = '<td colspan="5" style="text-align: center;">No hay bloques disponibles</td>';
+                    blockList.appendChild(row);
+                    return;
+                }
+                
+                for (let i = currentBlock; i > Math.max(0, currentBlock - 10); i--) {
+                    try {
+                        const block = await provider.getBlock(i);
+                        if (!block) continue;
+                        
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${block.number}</td>
+                            <td class="time-cell">${new Date(block.timestamp * 1000).toLocaleString()}</td>
+                            <td>${block.transactions.length}</td>
+                            <td>${block.gasUsed.toString()}</td>
+                            <td class="address-cell">${block.miner || 'N/A'}</td>
+                        `;
+                        blockList.appendChild(row);
+                    } catch (e) {
+                        console.error(`Error processing block ${i}:`, e);
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating blocks list:', error);
+                const blockList = document.getElementById('blockList');
+                blockList.innerHTML = '<tr><td colspan="5" style="text-align: center;">Error al cargar bloques</td></tr>';
+            }
+        }
+
+        async function updateHoldersList() {
+            try {
+                const holdersList = document.getElementById('holdersList');
+                holdersList.innerHTML = '';
+                
+                const holders = await getHolders();
+                
+                if (holders.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = '<td colspan="4" style="text-align: center;">No hay holders disponibles</td>';
+                    holdersList.appendChild(row);
+                    return;
+                }
+                
+                // Obtener balances
+                const holdersWithBalance = [];
+                for (const address of holders) {
+                    try {
+                        const balance = await contract.balanceOf(address);
+                        holdersWithBalance.push({ address, balance });
+                    } catch (e) {
+                        console.error(`Error getting balance for ${address}:`, e);
+                    }
+                }
+                
+                // Calcular total supply
+                let totalSupply = 0n;
+                for (const holder of holdersWithBalance) {
+                    totalSupply += holder.balance;
+                }
+                
+                // Ordenar por balance
+                holdersWithBalance.sort((a, b) => (b.balance > a.balance) ? 1 : -1);
+                
+                // Renderizar tabla
+                holdersWithBalance.forEach((holder, index) => {
+                    const percentage = totalSupply > 0 ? 
+                        Number((holder.balance * 100n) / totalSupply) : 0;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td class="address-cell">${holder.address}</td>
+                        <td>${holder.balance.toString()}</td>
+                        <td>${percentage.toFixed(2)}%</td>
+                    `;
+                    holdersList.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error updating holders list:', error);
+                const holdersList = document.getElementById('holdersList');
+                holdersList.innerHTML = '<tr><td colspan="4" style="text-align: center;">Error al cargar holders</td></tr>';
+            }
+        }
+
+        function showTab(tabName) {
+            // Ocultar todos los contenidos
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Desactivar todos los botones
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Mostrar el contenido seleccionado
+            document.getElementById(tabName).classList.add('active');
+            
+            // Activar el botón seleccionado
+            const button = document.querySelector(`.tab-btn[onclick="showTab('${tabName}')"]`);
+            if (button) button.classList.add('active');
+        }
+
+        async function search() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+
+            try {
+                // Buscar por bloque si es un número
+                if (/^\d+$/.test(query)) {
+                    const block = await provider.getBlock(parseInt(query));
+                    if (block) {
+                        showTab('blocks');
+                        // Resaltar el bloque en la lista
+                        return;
+                    }
+                }
+
+                // Buscar por hash de transacción
+                if (query.startsWith('0x') && query.length === 66) {
+                    const tx = await provider.getTransaction(query);
+                    if (tx) {
+                        showTab('transactions');
+                        // Resaltar la transacción en la lista
+                        return;
+                    }
+                }
+
+                // Buscar por dirección
+                if (ethers.isAddress(query)) {
+                    const balance = await contract.balanceOf(query);
+                    document.getElementById('balanceCheckAddress').value = query;
+                    await checkBalance();
+                    showTab('holders');
+                }
+            } catch (error) {
+                console.error('Error en la búsqueda:', error);
+                alert('No se encontraron resultados para la búsqueda');
+            }
+        }
+
+        // Modificar la función connectWallet para incluir la actualización del explorador
         async function connectWallet() {
             try {
                 if (typeof window.ethereum !== 'undefined') {
@@ -350,26 +1202,36 @@
                     signer = await provider.getSigner();
                     userAddress = await signer.getAddress();
                     
-                    document.getElementById('connectionStatus').innerHTML = 
-                        'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(38);
+                    // Actualizar UI
+                    document.getElementById('connectionStatusText').innerHTML = 
+                        userAddress.substring(0, 6) + '...' + userAddress.substring(38);
+                    document.getElementById('connectionIndicator').classList.remove('disconnected');
+                    document.getElementById('connectionIndicator').classList.add('connected');
+                    document.getElementById('connectBtn').textContent = 'Conectado';
+                    document.getElementById('connectBtn').disabled = true;
 
                     await initializeContracts();
                     await updateContractStatus();
                     await updateUserRole();
+                    await updateExplorerData();
+                    
+                    // Configurar actualizaciones periódicas del explorador
+                    setInterval(updateExplorerData, 15000);
                     
                     // Configurar listeners para cambios en la red o cuenta
-                    window.ethereum.removeAllListeners(); // Remover listeners existentes
+                    window.ethereum.removeAllListeners();
                     window.ethereum.on('chainChanged', () => window.location.reload());
                     window.ethereum.on('accountsChanged', () => window.location.reload());
                     window.ethereum.on('disconnect', async () => {
                         console.log('Desconectado de la red. Intentando reconectar...');
                         setTimeout(connectWallet, 2000);
                     });
+                } else {
+                    alert('Por favor instala MetaMask para usar esta aplicación.');
                 }
             } catch (error) {
                 console.error('Error connecting to MetaMask:', error);
-                document.getElementById('connectionStatus').innerHTML = 
-                    'Error connecting: ' + (error.message || 'Unknown error');
+                document.getElementById('connectionStatusText').innerHTML = 'Error al conectar';
                 
                 // Intentar reconectar si es un error de red
                 if (error.code === 'NETWORK_ERROR' || error.message?.includes('network')) {
@@ -397,17 +1259,14 @@
                     `${contractAddress.substring(0, 6)}...${contractAddress.substring(38)}`;
                 document.getElementById('userRegistryAddress').textContent = 
                     `${registryAddress.substring(0, 6)}...${registryAddress.substring(38)}`;
-                
-                console.log('Direcciones de contratos cargadas:', { contractAddress, registryAddress });
             } catch (error) {
-                console.error('Error cargando direcciones:', error);
+                console.error('Error loading contract addresses:', error);
                 if (retryCount > 0) {
-                    console.log(`Reintentando cargar direcciones... (${retryCount} intentos restantes)`);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    return loadContractAddresses(retryCount - 1);
+                    console.log(`Retrying... (${retryCount} attempts left)`);
+                    setTimeout(() => loadContractAddresses(retryCount - 1), 1000);
+                } else {
+                    alert('No se pudieron cargar las direcciones de los contratos después de varios intentos.');
                 }
-                document.getElementById('connectionStatus').innerHTML = 
-                    'Error: No se pudieron cargar las direcciones de los contratos. ' + error.message;
             }
         }
 
@@ -416,117 +1275,31 @@
                 if (!contractAddress || !registryAddress) {
                     await loadContractAddresses();
                 }
+
+                if (!provider || !signer) {
+                    throw new Error('Proveedor o firma no inicializados. Por favor, conecta tu wallet primero.');
+                }
+
                 contract = new ethers.Contract(contractAddress, contractABI, signer);
                 registryContract = new ethers.Contract(registryAddress, registryABI, signer);
+
+                // Verificar que los contratos estén desplegados correctamente
+                const code = await provider.getCode(contractAddress);
+                if (code === '0x') {
+                    throw new Error('El contrato SimpleStorage no está desplegado en esta dirección');
+                }
+
+                const registryCode = await provider.getCode(registryAddress);
+                if (registryCode === '0x') {
+                    throw new Error('El contrato UserRegistry no está desplegado en esta dirección');
+                }
+
+                console.log('Contratos inicializados correctamente');
                 await checkUserRegistration();
             } catch (error) {
-                console.error('Error initializing contracts:', error);
-                document.getElementById('connectionStatus').innerHTML = 
-                    'Error: No se pudieron inicializar los contratos. ' + error.message;
+                console.error('Error inicializando contratos:', error);
+                throw error;
             }
-        }
-
-        // Nuevas funciones para el manejo de carteras
-        function showMetaMaskRegistration() {
-            document.getElementById('metamaskRegistration').style.display = 'block';
-            document.getElementById('newWalletRegistration').style.display = 'none';
-            document.getElementById('walletChoiceSection').style.display = 'none';
-        }
-
-        function showNewWalletRegistration() {
-            document.getElementById('metamaskRegistration').style.display = 'none';
-            document.getElementById('newWalletRegistration').style.display = 'block';
-            document.getElementById('walletChoiceSection').style.display = 'none';
-        }
-
-        async function registerWithMetaMask() {
-            try {
-                const username = document.getElementById('usernameMetaMask').value.trim();
-                if (!username) {
-                    alert('Por favor, ingresa un nombre de usuario');
-                    return;
-                }
-
-                if (!registryContract) {
-                    await connectWallet();
-                }
-
-                const tx = await registryContract.registerWithExistingWallet(username);
-                await tx.wait();
-                
-                alert('¡Registro exitoso con MetaMask!');
-                await checkUserRegistration();
-            } catch (error) {
-                console.error('Error en registro con MetaMask:', error);
-                alert('Error en el registro: ' + (error.reason || error.message));
-            }
-        }
-
-        async function createAndRegisterWallet() {
-            try {
-                const username = document.getElementById('usernameNewWallet').value.trim();
-                if (!username) {
-                    alert('Por favor, ingresa un nombre de usuario');
-                    return;
-                }
-
-                // Generar nueva cartera
-                const wallet = ethers.Wallet.createRandom();
-                
-                // Mostrar información de la cartera
-                document.getElementById('generatedAddress').textContent = wallet.address;
-                document.getElementById('privateKey').textContent = wallet.privateKey;
-                document.getElementById('generatedWalletInfo').style.display = 'block';
-
-                // Registrar la cartera generada
-                if (!registryContract) {
-                    await connectWallet(); // Necesitamos MetaMask para registrar la nueva cartera
-                }
-
-                const tx = await registryContract.registerWithGeneratedWallet(username, wallet.address);
-                await tx.wait();
-
-                // Guardar información de la cartera en el localStorage (encriptada)
-                const walletInfo = {
-                    address: wallet.address,
-                    privateKey: wallet.privateKey,
-                    username: username,
-                    creationDate: new Date().toISOString()
-                };
-                
-                const encryptedInfo = btoa(JSON.stringify(walletInfo)); // Encriptación básica
-                localStorage.setItem(`wallet_${wallet.address}`, encryptedInfo);
-
-                alert('¡Cartera creada y registrada exitosamente!');
-            } catch (error) {
-                console.error('Error creando cartera:', error);
-                alert('Error creando cartera: ' + (error.reason || error.message));
-            }
-        }
-
-        function downloadWalletInfo() {
-            const address = document.getElementById('generatedAddress').textContent;
-            const privateKey = document.getElementById('privateKey').textContent;
-            const username = document.getElementById('usernameNewWallet').value;
-
-            const walletInfo = {
-                address: address,
-                privateKey: privateKey,
-                username: username,
-                creationDate: new Date().toISOString(),
-                network: 'Hardhat Local',
-                warning: 'MANTÉN ESTA INFORMACIÓN SEGURA Y PRIVADA'
-            };
-
-            const blob = new Blob([JSON.stringify(walletInfo, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `wallet-${address.substring(0, 8)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
         }
 
         // Modificar la función existente de checkUserRegistration
@@ -552,15 +1325,86 @@
             document.getElementById('userInfo').style.display = 'block';
             document.getElementById('userUsername').textContent = userDetails.username;
             document.getElementById('userRegDate').textContent = 
-                new Date(userDetails.registrationDate * 1000).toLocaleString();
+                new Date(Number(userDetails.registrationDate) * 1000).toLocaleString();
+        }
+
+        function showMetaMaskRegistration() {
+            document.getElementById('walletChoiceSection').style.display = 'none';
+            document.getElementById('metamaskRegistration').style.display = 'block';
+            document.getElementById('newWalletRegistration').style.display = 'none';
+        }
+
+        function showNewWalletRegistration() {
+            document.getElementById('walletChoiceSection').style.display = 'none';
+            document.getElementById('metamaskRegistration').style.display = 'none';
+            document.getElementById('newWalletRegistration').style.display = 'block';
+        }
+
+        async function registerWithMetaMask() {
+            try {
+                const username = document.getElementById('usernameMetaMask').value;
+                if (!username) {
+                    alert('Por favor ingresa un nombre de usuario');
+                    return;
+                }
+                
+                const tx = await registryContract.registerWithExistingWallet(username);
+                await tx.wait();
+                alert('Registro exitoso! Ahora puedes usar la plataforma.');
+                await checkUserRegistration();
+            } catch (error) {
+                alert('Error al registrarse: ' + (error.reason || error.message));
+            }
+        }
+
+        async function createAndRegisterWallet() {
+            try {
+                const username = document.getElementById('usernameNewWallet').value;
+                if (!username) {
+                    alert('Por favor ingresa un nombre de usuario');
+                    return;
+                }
+                
+                // Crear nueva wallet
+                const wallet = ethers.Wallet.createRandom();
+                
+                // Mostrar información de la wallet
+                document.getElementById('generatedAddress').textContent = wallet.address;
+                document.getElementById('privateKey').textContent = wallet.privateKey;
+                document.getElementById('generatedWalletInfo').style.display = 'block';
+                
+                // Registrar la wallet
+                const tx = await registryContract.registerWithGeneratedWallet(username, wallet.address);
+                await tx.wait();
+                
+                alert('Wallet creada y registrada exitosamente! Por favor guarda tu clave privada.');
+            } catch (error) {
+                alert('Error al crear y registrar wallet: ' + (error.reason || error.message));
+            }
+        }
+
+        function downloadWalletInfo() {
+            const address = document.getElementById('generatedAddress').textContent;
+            const privateKey = document.getElementById('privateKey').textContent;
+            const username = document.getElementById('usernameNewWallet').value;
             
-            // Mostrar tipo de cartera
-            const walletType = userDetails.isGeneratedWallet ? 
-                'Cartera Generada por el Sistema' : 
-                'Cartera MetaMask';
-            document.getElementById('userInfo').innerHTML += `
-                <p>Tipo de Cartera: <strong>${walletType}</strong></p>
-            `;
+            const content = `EcoToken Wallet Information
+Username: ${username}
+Address: ${address}
+Private Key: ${privateKey}
+Created: ${new Date().toLocaleString()}
+
+IMPORTANT: Keep this information secure and private. Do not share with anyone.`;
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ecotoken-wallet-${new Date().getTime()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         async function updateContractStatus() {
@@ -568,11 +1412,12 @@
                 const isPaused = await contract.paused();
                 const statusElement = document.getElementById('contractStatus');
                 statusElement.textContent = isPaused ? 'PAUSED' : 'ACTIVE';
-                statusElement.className = 'status ' + (isPaused ? 'paused' : 'active');
+                statusElement.className = 'badge ' + (isPaused ? 'badge-danger' : 'badge-success');
                 
                 // Update pause button text
                 const pauseButton = document.getElementById('pauseButton');
-                pauseButton.textContent = isPaused ? 'Unpause Contract' : 'Pause Contract';
+                pauseButton.textContent = isPaused ? 'Reactivar Contrato' : 'Pausar Contrato';
+                pauseButton.className = 'btn ' + (isPaused ? 'btn-primary' : 'btn-danger');
             } catch (error) {
                 console.error('Error updating contract status:', error);
             }
@@ -582,17 +1427,17 @@
             try {
                 const ownerAddress = await contract.owner();
                 const isUserAdmin = await contract.isAdmin(userAddress);
-                let role = 'User';
+                let role = 'Usuario';
                 
                 if (userAddress.toLowerCase() === ownerAddress.toLowerCase()) {
-                    role = 'Owner';
+                    role = 'Propietario';
+                    document.getElementById('adminNavItem').style.display = 'block';
                 } else if (isUserAdmin) {
-                    role = 'Administrator';
+                    role = 'Administrador';
+                    document.getElementById('adminNavItem').style.display = 'block';
                 }
                 
                 document.getElementById('userRole').textContent = role;
-                document.getElementById('adminSection').style.display = 
-                    (role === 'Owner' || role === 'Administrator') ? 'block' : 'none';
             } catch (error) {
                 console.error('Error updating user role:', error);
             }
@@ -606,37 +1451,37 @@
                     await contract.pause();
                 await tx.wait();
                 updateContractStatus();
-                alert(`Contract ${isPaused ? 'unpaused' : 'paused'} successfully!`);
+                alert(`Contrato ${isPaused ? 'reactivado' : 'pausado'} exitosamente!`);
             } catch (error) {
-                alert('Error toggling pause state: ' + (error.reason || error.message));
+                alert('Error al cambiar el estado del contrato: ' + (error.reason || error.message));
             }
         }
 
         async function addAdmin() {
             try {
                 const address = document.getElementById('adminAddress').value;
-                if (!ethers.utils.isAddress(address)) {
-                    throw new Error('Invalid address format');
+                if (!ethers.isAddress(address)) {
+                    throw new Error('Formato de dirección inválido');
                 }
                 const tx = await contract.addAdmin(address);
                 await tx.wait();
-                alert('Administrator added successfully!');
+                alert('Administrador añadido exitosamente!');
             } catch (error) {
-                alert('Error adding administrator: ' + (error.reason || error.message));
+                alert('Error al añadir administrador: ' + (error.reason || error.message));
             }
         }
 
         async function removeAdmin() {
             try {
                 const address = document.getElementById('adminAddress').value;
-                if (!ethers.utils.isAddress(address)) {
-                    throw new Error('Invalid address format');
+                if (!ethers.isAddress(address)) {
+                    throw new Error('Formato de dirección inválido');
                 }
                 const tx = await contract.removeAdmin(address);
                 await tx.wait();
-                alert('Administrator removed successfully!');
+                alert('Administrador eliminado exitosamente!');
             } catch (error) {
-                alert('Error removing administrator: ' + (error.reason || error.message));
+                alert('Error al eliminar administrador: ' + (error.reason || error.message));
             }
         }
 
@@ -645,27 +1490,27 @@
                 const to = document.getElementById('transferTo').value;
                 const amount = document.getElementById('transferAmount').value;
                 
-                if (!ethers.utils.isAddress(to)) {
-                    throw new Error('Invalid recipient address');
+                if (!ethers.isAddress(to)) {
+                    throw new Error('Dirección de destinatario inválida');
                 }
                 if (!amount || amount <= 0) {
-                    throw new Error('Invalid amount');
+                    throw new Error('Cantidad inválida');
                 }
 
                 const tx = await contract.transfer(to, amount);
                 await tx.wait();
-                alert('Transfer successful!');
+                alert('Transferencia realizada exitosamente!');
                 retrieveNumber();
             } catch (error) {
-                alert('Error transferring value: ' + (error.reason || error.message));
+                alert('Error al transferir: ' + (error.reason || error.message));
             }
         }
 
         async function checkBalance() {
             try {
                 const address = document.getElementById('balanceCheckAddress').value;
-                if (!ethers.utils.isAddress(address)) {
-                    throw new Error('Invalid address format');
+                if (!ethers.isAddress(address)) {
+                    throw new Error('Formato de dirección inválido');
                 }
                 const balance = await contract.balanceOf(address);
                 document.getElementById('addressBalance').textContent = balance.toString();
@@ -770,17 +1615,19 @@
             }
         }
 
-        // Modificar el event listener para cargar las direcciones al inicio
+        // Event listener para cargar las direcciones al inicio
         window.addEventListener('load', async function() {
             try {
                 await loadContractAddresses();
                 
                 if (typeof window.ethereum !== 'undefined') {
-                    document.getElementById('connectionStatus').innerHTML = 
-                        'MetaMask instalado! Haz click en Conectar Wallet para comenzar.';
+                    document.getElementById('connectionStatusText').innerHTML = 
+                        'MetaMask instalado! Haz click en Conectar para comenzar.';
                 } else {
-                    document.getElementById('connectionStatus').innerHTML = 
-                        'Por favor instala MetaMask para usar esta aplicación.';
+                    document.getElementById('connectionStatusText').innerHTML = 
+                        'MetaMask no detectado';
+                    document.getElementById('connectBtn').disabled = true;
+                    alert('Por favor instala MetaMask para usar esta aplicación.');
                 }
             } catch (error) {
                 console.error('Error en la carga inicial:', error);

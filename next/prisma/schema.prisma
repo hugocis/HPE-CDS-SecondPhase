@@ -1,0 +1,267 @@
+// This is your Prisma schema file
+// Learn more about it at https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Auth and User models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  // Changed from Int to String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String   // Changed from Int to String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  password      String?
+  role          String    @default("USER")
+  lastLogin     DateTime?
+  phone         String?
+  address       String?
+  walletAddress String?   @unique
+  privateKey    String?
+  accounts      Account[]
+  sessions      Session[]
+  orders        Order[]
+  cart          Cart?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  discountRedemptions DiscountRedemption[]
+  amenityPurchases    AmenityPurchase[]
+}
+
+// Cart and Order models
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    String     @unique // Added @unique here
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id            Int      @id @default(autoincrement())
+  cartId        Int
+  cart          Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  itemType      String   // HOTEL, ROUTE, SERVICE, VEHICLE
+  itemId        Int
+  quantity      Int
+  price         Float
+  startDate     DateTime
+  endDate       DateTime?
+  additionalInfo Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([cartId, itemType, itemId])
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  userId        String      // Changed from Int to String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalAmount   Float
+  discount      Float       @default(0)
+  status        String      @default("COMPLETED")
+  orderType     String      // HOTEL, ROUTE, SERVICE, VEHICLE
+  itemId        Int
+  quantity      Int         @default(1)
+  startDate     DateTime?
+  endDate       DateTime?
+  additionalInfo Json?
+  paymentMethod String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  discountRedemptions DiscountRedemption[]
+  amenityPurchases    AmenityPurchase[]
+}
+
+// Model for tourist routes
+model Route {
+  id               Int             @id @default(autoincrement())
+  name             String          @unique
+  routeType        String?         // Cultural, Adventure, etc.
+  lengthKm         Float?
+  durationHr       Float?
+  popularity       Int?
+  // Relations
+  transportUsages  TransportUsage[]
+  reviews          Review[]        @relation("RouteReviews")
+}
+
+// Model for transport usage
+model TransportUsage {
+  id                   Int      @id @default(autoincrement())
+  date                 DateTime
+  vehicleTypeId        Int
+  vehicleType          VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  userCount            Int
+  averageTravelTimeMin Float
+  popularRouteId       Int?
+  popularRoute         Route?   @relation(fields: [popularRouteId], references: [id])
+}
+
+// Model for vehicle types
+model VehicleType {
+  id             Int              @id @default(autoincrement())
+  name           String           @unique
+  transportUsages TransportUsage[]
+}
+
+// Model for hotels
+model Hotel {
+  id                Int                @id @default(autoincrement())
+  name              String             @unique
+  // Relations
+  occupancyData     HotelOccupancy[]
+  sustainabilityData HotelSustainability[]
+  reviews           Review[]           @relation("HotelReviews")
+}
+
+// Model for hotel occupancy data
+model HotelOccupancy {
+  id                  Int      @id @default(autoincrement())
+  hotelId             Int
+  hotel               Hotel    @relation(fields: [hotelId], references: [id])
+  date                DateTime
+  occupancyRate       Float
+  confirmedBookings   Int
+  cancellations       Int
+  averagePricePerNight Float
+}
+
+// Model for hotel sustainability data
+model HotelSustainability {
+  id                Int      @id @default(autoincrement())
+  hotelId           Int
+  hotel             Hotel    @relation(fields: [hotelId], references: [id])
+  date              DateTime
+  energyConsumptionKwh Float
+  wasteGeneratedKg   Float
+  recyclingPercentage Float
+  waterUsageM3       Float
+}
+
+// Model for tourism services
+model Service {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  type    String   // Service, Route, Hotel
+  reviews Review[] @relation("ServiceReviews")
+}
+
+// Model for tourism reviews
+model Review {
+  id            Int       @id @default(autoincrement())
+  date          DateTime
+  rating        Int
+  comment       String?
+  language      String?
+  
+  // Relations with different types of services
+  serviceId     Int?
+  service       Service?  @relation("ServiceReviews", fields: [serviceId], references: [id])
+  
+  hotelId       Int?
+  hotel         Hotel?    @relation("HotelReviews", fields: [hotelId], references: [id])
+  
+  routeId       Int?
+  route         Route?    @relation("RouteReviews", fields: [routeId], references: [id])
+}
+
+// Discounts and Amenities models
+model Discount {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  tokenCost   Int
+  discountType String  // PERCENTAGE, FIXED_AMOUNT
+  discountValue Float
+  validFrom   DateTime
+  validUntil  DateTime
+  maxUses     Int?
+  usedCount   Int      @default(0)
+  isActive    Boolean  @default(true)
+  applicableTo String[] @default([])
+  qrCode      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  redemptions DiscountRedemption[]
+}
+
+model DiscountRedemption {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  discountId  Int
+  discount    Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
+  orderId     Int?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  redeemedAt  DateTime @default(now())
+  tokensPaid  Int
+  qrCode      String
+  isUsed      Boolean  @default(false)
+  usedAt      DateTime?
+}
+
+model Amenity {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  tokenCost   Int
+  type        String   // VIP_ACCESS, SPECIAL_SERVICE, etc.
+  isActive    Boolean  @default(true)
+  maxQuantity Int?
+  qrCode      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  purchases   AmenityPurchase[]
+}
+
+model AmenityPurchase {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amenityId   Int
+  amenity     Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+  orderId     Int?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  quantity    Int      @default(1)
+  tokensPaid  Int
+  purchasedAt DateTime @default(now())
+  status      String   @default("ACTIVE")
+  qrCode      String
+  isUsed      Boolean  @default(false)
+  usedAt      DateTime?
+}

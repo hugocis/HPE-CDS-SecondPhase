@@ -6,6 +6,7 @@ services:
     container_name: ecotoken-blockchain
     ports:
       - "5051:5050"  # Puerto para la aplicación web
+      - "3001:3001"  # Puerto para la API REST
       - "8545:8545"  # Puerto para el nodo Hardhat
     volumes:
       - ./contracts:/app/contracts
@@ -16,6 +17,14 @@ services:
     environment:
       - NODE_ENV=development
       - HARDHAT_NETWORK=localhost
+      # Configuración de PostgreSQL
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=ecotoken
+      - POSTGRES_HOST=host.docker.internal
+      - POSTGRES_PORT=5432
+      # Esta es la clave privada de la primera cuenta de Hardhat (account #0)
+      - ADMIN_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:5050"]
       interval: 30s
@@ -24,6 +33,8 @@ services:
     restart: unless-stopped
     networks:
       - blockchain-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 networks:
   blockchain-network:
