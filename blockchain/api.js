@@ -29,33 +29,53 @@ let USER_REGISTRY_ADDRESS = process.env.USER_REGISTRY_ADDRESS || '';
 // Clave privada del administrador (¡Ten cuidado con esto en producción!)
 const ADMIN_PRIVATE_KEY = process.env.ADMIN_PRIVATE_KEY || '';
 
-// Inicializar conexión a la blockchain
-const initBlockchainConnection = () => {
+// Modificar la función initBlockchainConnection
+const initBlockchainConnection = async () => {
   try {
+    // Leer las direcciones de los contratos desde el archivo
+    const addressesPath = path.join(__dirname, 'public', 'contract-addresses.json');
+    if (!fs.existsSync(addressesPath)) {
+      throw new Error('No se encontró el archivo de direcciones de contratos');
+    }
+
+    const addresses = JSON.parse(fs.readFileSync(addressesPath, 'utf8'));
+    SIMPLE_STORAGE_ADDRESS = addresses.simpleStorage;
+    USER_REGISTRY_ADDRESS = addresses.userRegistry;
+
+    if (!SIMPLE_STORAGE_ADDRESS || !USER_REGISTRY_ADDRESS) {
+      throw new Error('Direcciones de contratos no encontradas en el archivo');
+    }
+
     // Usar el nodo de Hardhat local o un nodo especificado por variable de entorno
     const rpcUrl = process.env.RPC_URL || 'http://127.0.0.1:8545';
     provider = new ethers.JsonRpcProvider(rpcUrl);
 
-    // Crear instancias de los contratos si las direcciones están disponibles
-    if (SIMPLE_STORAGE_ADDRESS) {
-      simpleStorageContract = new ethers.Contract(
-        SIMPLE_STORAGE_ADDRESS,
-        SimpleStorageJson.abi,
-        provider
-      );
+    // Esperar a que el provider esté listo
+    await provider.ready;
 
-      console.log(`SimpleStorage contrato conectado en: ${SIMPLE_STORAGE_ADDRESS}`);
+    // Crear instancias de los contratos
+    simpleStorageContract = new ethers.Contract(
+      SIMPLE_STORAGE_ADDRESS,
+      SimpleStorageJson.abi,
+      provider
+    );
+
+    userRegistryContract = new ethers.Contract(
+      USER_REGISTRY_ADDRESS,
+      UserRegistryJson.abi,
+      provider
+    );
+
+    // Verificar que los contratos están desplegados
+    const simpleStorageCode = await provider.getCode(SIMPLE_STORAGE_ADDRESS);
+    const userRegistryCode = await provider.getCode(USER_REGISTRY_ADDRESS);
+
+    if (simpleStorageCode === '0x' || userRegistryCode === '0x') {
+      throw new Error('Los contratos no están desplegados correctamente');
     }
 
-    if (USER_REGISTRY_ADDRESS) {
-      userRegistryContract = new ethers.Contract(
-        USER_REGISTRY_ADDRESS,
-        UserRegistryJson.abi,
-        provider
-      );
-
-      console.log(`UserRegistry contrato conectado en: ${USER_REGISTRY_ADDRESS}`);
-    }
+    console.log(`SimpleStorage contrato conectado en: ${SIMPLE_STORAGE_ADDRESS}`);
+    console.log(`UserRegistry contrato conectado en: ${USER_REGISTRY_ADDRESS}`);
 
     // Configurar wallet de administrador si la clave está disponible
     if (ADMIN_PRIVATE_KEY) {
@@ -374,16 +394,28 @@ app.put('/api/users/update-username', async (req, res) => {
   }
 });
 
-// Iniciar el servidor
-app.listen(PORT, () => {
+// Modificar la inicialización del servidor
+app.listen(PORT, async () => {
   console.log(`API Server running on port ${PORT}`);
   
-  // Intentar conectar a la blockchain al iniciar
-  const connected = initBlockchainConnection();
+  // Intentar conectar a la blockchain con reintentos
+  let retries = 3;
+  let connected = false;
+  
+  while (retries > 0 && !connected) {
+    console.log(`Intentando conectar a la blockchain (intentos restantes: ${retries})...`);
+    connected = await initBlockchainConnection();
+    if (!connected) {
+      retries--;
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar 5 segundos entre intentos
+    }
+  }
+  
   if (connected) {
     console.log('Conexión a blockchain inicializada con éxito');
   } else {
-    console.log('No se pudo inicializar la conexión a blockchain');
+    console.error('No se pudo inicializar la conexión a blockchain después de varios intentos');
+    process.exit(1);
   }
 });
 
