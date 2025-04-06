@@ -81,7 +81,7 @@ export default function Navbar() {
       path: '/rewards',
       icon: (
         <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2zM17 16v2a2 2 0 01-2 2H9a2 2 0 01-2-2v-2M14 4h6m0 0v6m0-6L10 14" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm7 10.5c-1.5 0-3-1.5-3-1.5l3-3 3 3s-1.5 1.5-3 1.5zM7 19h10v-2a3 3 0 0 0-3-3h-4a3 3 0 0 0-3 3v2z" />
         </svg>
       )
     }
